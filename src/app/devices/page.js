@@ -37,6 +37,7 @@ const PRESET_LIBRARY_DEVICES = [
     name: 'Samsung Twin Cooling Refrigerator',
     brand: 'Samsung',
     type: 'Refrigerator',
+    imageUrl: '/preset_fridge.jpg',
     imageIcon: 'fa-snowflake',
     powerRating: 350,
     maxWorkingHours: 24,
@@ -47,6 +48,7 @@ const PRESET_LIBRARY_DEVICES = [
     name: 'LG Dual Inverter Air Conditioner',
     brand: 'LG',
     type: 'AC',
+    imageUrl: '/preset_ac.jpg',
     imageIcon: 'fa-wind',
     powerRating: 1450,
     maxWorkingHours: 10,
@@ -57,6 +59,7 @@ const PRESET_LIBRARY_DEVICES = [
     name: 'Ariston Pro1 Eco Water Heater',
     brand: 'Ariston',
     type: 'Water Heater',
+    imageUrl: '/preset_heater.jpg',
     imageIcon: 'fa-faucet-drip',
     powerRating: 2000,
     maxWorkingHours: 4,
@@ -67,6 +70,7 @@ const PRESET_LIBRARY_DEVICES = [
     name: 'Sony Bravia 4K Smart TV',
     brand: 'Sony',
     type: 'TV',
+    imageUrl: '/preset_tv.jpg',
     imageIcon: 'fa-tv',
     powerRating: 150,
     maxWorkingHours: 6,
@@ -77,6 +81,7 @@ const PRESET_LIBRARY_DEVICES = [
     name: 'Tesla Wall Connector EV Charger',
     brand: 'Tesla',
     type: 'EV Charger',
+    imageUrl: '/preset_ev.jpg',
     imageIcon: 'fa-car-battery',
     powerRating: 7400,
     maxWorkingHours: 5,
@@ -87,6 +92,7 @@ const PRESET_LIBRARY_DEVICES = [
     name: 'Philips Hue Smart LED Bulb',
     brand: 'Philips',
     type: 'Lighting',
+    imageUrl: '/preset_lamp.jpg',
     imageIcon: 'fa-lightbulb',
     powerRating: 9,
     maxWorkingHours: 12,
@@ -97,6 +103,7 @@ const PRESET_LIBRARY_DEVICES = [
     name: 'Bosch Series 6 Washing Machine',
     brand: 'Bosch',
     type: 'Washer',
+    imageUrl: 'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=400&auto=format&fit=crop&q=80',
     imageIcon: 'fa-shirt',
     powerRating: 2200,
     maxWorkingHours: 2,
@@ -107,6 +114,7 @@ const PRESET_LIBRARY_DEVICES = [
     name: 'Dell OptiPlex Workstation PC',
     brand: 'Dell',
     type: 'Computer',
+    imageUrl: 'https://images.unsplash.com/photo-1547082299-de196ea013d6?w=400&auto=format&fit=crop&q=80',
     imageIcon: 'fa-desktop',
     powerRating: 250,
     maxWorkingHours: 8,
@@ -574,8 +582,8 @@ export default function DevicesPage() {
                       boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
                     }}
                   >
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(77,163,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', fontSize: 14, color: 'var(--secondary)' }}>
-                      <i className={`fa-solid ${item.imageIcon}`} />
+                    <div style={{ width: '100%', height: 70, borderRadius: 8, background: 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', overflow: 'hidden' }}>
+                      <img src={item.imageUrl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                     <div style={{ fontWeight: 700, fontSize: 11, color: 'var(--primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {item.name}
@@ -801,8 +809,8 @@ export default function DevicesPage() {
         <Modal show={showPresetDetails} onClose={() => setShowPresetDetails(false)} title="📋 Review Pre-Configured Device Details">
           <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, background: 'var(--accent)', borderRadius: 12, border: '1px solid var(--border)' }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(77,163,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: 'var(--secondary)' }}>
-                <i className={`fa-solid ${selectedPresetItem.imageIcon}`} />
+              <div style={{ width: 64, height: 64, borderRadius: 12, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.04)' }}>
+                <img src={selectedPresetItem.imageUrl} alt={selectedPresetItem.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
               <div>
                 <h4 style={{ fontSize: 14, fontWeight: 800, color: 'var(--primary)' }}>{selectedPresetItem.name}</h4>
