@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const supabaseClient = require('./supabase');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'smart_power_secret_key_9876';
-const DEVICE_PASSWORD = 'fakherk@2010';
+const DEVICE_PASSWORD = 'fakherkoky@2010';
 
 let db = {
   users: [],

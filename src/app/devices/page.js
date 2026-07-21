@@ -20,6 +20,18 @@ const DEVICE_ICONS = [
 
 const DEVICE_TYPES = ['AC', 'Refrigerator', 'Water Heater', 'TV', 'EV Charger', 'Lighting', 'Appliance', 'Computer', 'Washer', 'Other'];
 
+const APPLIANCE_MAPPINGS = [
+  { keywords: ['ac', 'air conditioner', 'cool', 'aircon'], label: 'Air Conditioner', icon: 'fa-wind' },
+  { keywords: ['fridge', 'refrigerator', 'freezer', 'cold'], label: 'Refrigerator', icon: 'fa-snowflake' },
+  { keywords: ['heater', 'water heater', 'boiler'], label: 'Water Heater', icon: 'fa-faucet-drip' },
+  { keywords: ['tv', 'television', 'screen', 'monitor'], label: 'Television', icon: 'fa-tv' },
+  { keywords: ['car', 'ev', 'charger', 'tesla'], label: 'EV Charger', icon: 'fa-car-battery' },
+  { keywords: ['lamp', 'light', 'bulb', 'led'], label: 'Lamp / Lighting', icon: 'fa-lightbulb' },
+  { keywords: ['washer', 'washing', 'laundry', 'dryer'], label: 'Washing Machine', icon: 'fa-shirt' },
+  { keywords: ['pc', 'computer', 'laptop', 'desktop'], label: 'Computer / PC', icon: 'fa-desktop' },
+  { keywords: ['microwave', 'oven', 'stove', 'cooker'], label: 'Microwave / Oven', icon: 'fa-fire-burner' },
+];
+
 function Modal({ show, onClose, title, children }) {
   if (!show) return null;
   return (
@@ -46,9 +58,24 @@ export default function DevicesPage() {
   const [alert, setAlert] = useState(null);
   const [user, setUser] = useState(null);
 
-  const [addForm, setAddForm] = useState({ name: '', type: 'AC', location: '', imageIcon: 'fa-plug', powerRating: 1500, maxWorkingHours: 8, maxEnergyConsumption: 10, auth_password: '' });
-  const [requestForm, setRequestForm] = useState({ reason: 'New Device Installation', message: '' });
+  // AI Mismatch Assist States
+  const [showAiAssist, setShowAiAssist] = useState(false);
+  const [aiContext, setAiContext] = useState(null);
 
+  const [addForm, setAddForm] = useState({
+    name: '',
+    type: 'AC',
+    location: '',
+    imageIcon: 'fa-wind',
+    customImage: '',
+    customImageName: '',
+    powerRating: 1500,
+    maxWorkingHours: 8,
+    maxEnergyConsumption: 10,
+    auth_password: ''
+  });
+
+  const [requestForm, setRequestForm] = useState({ reason: 'New Device Installation', message: '' });
   const token = typeof window !== 'undefined' ? localStorage.getItem('sph_token') : '';
 
   useEffect(() => {
@@ -77,23 +104,92 @@ export default function DevicesPage() {
     setTimeout(() => setAlert(null), 4000);
   }
 
-  async function handleAddDevice(e) {
+  // Handle custom image uploads
+  function handleImageUpload(e, isEdit = false) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (isEdit) {
+        setEditDevice(p => ({ ...p, customImage: reader.result, customImageName: file.name }));
+      } else {
+        setAddForm(p => ({ ...p, customImage: reader.result, customImageName: file.name }));
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Detect matching conflicts between name and image/icon
+  function checkMatchingConflict(name, icon, customImageName) {
+    const lowerName = name.toLowerCase();
+    const targetSource = customImageName ? customImageName.toLowerCase() : '';
+
+    // Check if name has key mismatch with preset icon
+    let expectedIcon = null;
+    let expectedLabel = '';
+
+    for (const mapping of APPLIANCE_MAPPINGS) {
+      if (mapping.keywords.some(k => lowerName.includes(k) || targetSource.includes(k))) {
+        expectedIcon = mapping.icon;
+        expectedLabel = mapping.label;
+        break;
+      }
+    }
+
+    if (expectedIcon && expectedIcon !== icon) {
+      const currentIconLabel = DEVICE_ICONS.find(i => i.value === icon)?.label || 'Other Appliance';
+      return {
+        expectedIcon,
+        expectedLabel,
+        currentIconLabel,
+        suggestedName: `${expectedLabel}`
+      };
+    }
+    return null;
+  }
+
+  // Process Add Device Submission with AI matcher
+  async function triggerAddDevice(e) {
     e.preventDefault();
+    
+    // Check match
+    const conflict = checkMatchingConflict(addForm.name, addForm.imageIcon, addForm.customImageName);
+    if (conflict) {
+      setAiContext({
+        type: 'add',
+        name: addForm.name,
+        icon: addForm.imageIcon,
+        customImage: addForm.customImage,
+        customImageName: addForm.customImageName,
+        expectedIcon: conflict.expectedIcon,
+        expectedLabel: conflict.expectedLabel,
+        currentIconLabel: conflict.currentIconLabel,
+        suggestedName: `${addForm.location ? addForm.location + ' ' : ''}${conflict.suggestedName}`
+      });
+      setShowAiAssist(true);
+      return;
+    }
+
+    await submitAddDevice(addForm);
+  }
+
+  async function submitAddDevice(formData) {
     const res = await fetch('/api/devices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify(addForm)
+      body: JSON.stringify(formData)
     });
     const data = await res.json();
 
     if (res.ok) {
       setShowAdd(false);
-      setAddForm({ name: '', type: 'AC', location: '', imageIcon: 'fa-plug', powerRating: 1500, maxWorkingHours: 8, maxEnergyConsumption: 10, auth_password: '' });
+      setAddForm({ name: '', type: 'AC', location: '', imageIcon: 'fa-wind', customImage: '', customImageName: '', powerRating: 1500, maxWorkingHours: 8, maxEnergyConsumption: 10, auth_password: '' });
       loadDevices();
       showAlert('Device registered successfully!', 'success');
     } else if (res.status === 403) {
       setShowAdd(false);
-      setRequestedName(addForm.name);
+      setRequestedName(formData.name);
       setRequestForm({ reason: 'New Device Installation', message: '' });
       showAlert('Incorrect Device Registration Password.', 'danger');
       setTimeout(() => setShowRequest(true), 600);
@@ -102,24 +198,89 @@ export default function DevicesPage() {
     }
   }
 
-  async function handleEditDevice(e) {
+  // Process Edit Device Submission with AI matcher
+  async function triggerEditDevice(e) {
     e.preventDefault();
-    const res = await fetch(`/api/devices/${editDevice._id || editDevice.id}`, {
+    
+    const conflict = checkMatchingConflict(editDevice.name, editDevice.imageIcon, editDevice.customImageName);
+    if (conflict) {
+      setAiContext({
+        type: 'edit',
+        name: editDevice.name,
+        icon: editDevice.imageIcon,
+        customImage: editDevice.customImage,
+        customImageName: editDevice.customImageName,
+        expectedIcon: conflict.expectedIcon,
+        expectedLabel: conflict.expectedLabel,
+        currentIconLabel: conflict.currentIconLabel,
+        suggestedName: `${editDevice.location ? editDevice.location + ' ' : ''}${conflict.suggestedName}`
+      });
+      setShowAiAssist(true);
+      return;
+    }
+
+    await submitEditDevice(editDevice);
+  }
+
+  async function submitEditDevice(deviceData) {
+    const res = await fetch(`/api/devices/${deviceData._id || deviceData.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({
-        name: editDevice.name,
-        type: editDevice.type,
-        location: editDevice.location,
-        power_rating: editDevice.powerRating,
-        max_working_hours: editDevice.maxWorkingHours,
-        max_energy_consumption: editDevice.maxEnergyConsumption
+        name: deviceData.name,
+        type: deviceData.type,
+        location: deviceData.location,
+        imageIcon: deviceData.imageIcon,
+        customImage: deviceData.customImage,
+        customImageName: deviceData.customImageName,
+        power_rating: deviceData.powerRating,
+        max_working_hours: deviceData.maxWorkingHours,
+        max_energy_consumption: deviceData.maxEnergyConsumption
       })
     });
     if (res.ok) {
       setShowEdit(false);
       loadDevices();
       showAlert('Device updated successfully!');
+    }
+  }
+
+  // Handle AI Mismatch Choices
+  async function handleAiResolution(option) {
+    setShowAiAssist(false);
+    if (!aiContext) return;
+
+    let updatedForm = {
+      name: aiContext.name,
+      imageIcon: aiContext.icon,
+      customImage: aiContext.customImage,
+      customImageName: aiContext.customImageName
+    };
+
+    if (option === 'fix_image') {
+      updatedForm.imageIcon = aiContext.expectedIcon;
+      updatedForm.customImage = ''; // Clear custom image mismatch
+      updatedForm.customImageName = '';
+      showAlert(`🤖 AI updated device image/icon to match "${aiContext.name}"!`);
+    } else if (option === 'fix_name') {
+      updatedForm.name = aiContext.suggestedName;
+      showAlert(`🤖 AI updated device name to "${aiContext.suggestedName}"!`);
+    } else if (option === 'ai_decide') {
+      updatedForm.name = aiContext.suggestedName;
+      updatedForm.imageIcon = aiContext.expectedIcon;
+      updatedForm.customImage = '';
+      updatedForm.customImageName = '';
+      showAlert(`🤖 AI Assistant optimized both: Name ➔ "${aiContext.suggestedName}" & Icon ➔ Correct Type!`);
+    }
+
+    if (aiContext.type === 'add') {
+      const mergedForm = { ...addForm, ...updatedForm };
+      setAddForm(mergedForm);
+      await submitAddDevice(mergedForm);
+    } else {
+      const mergedEdit = { ...editDevice, ...updatedForm };
+      setEditDevice(mergedEdit);
+      await submitEditDevice(mergedEdit);
     }
   }
 
@@ -211,8 +372,12 @@ export default function DevicesPage() {
                 {/* Top row */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: d.state === 1 ? 'rgba(16,185,129,0.12)' : 'rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'var(--transition)' }}>
-                      <i className={`fa-solid ${d.imageIcon || 'fa-plug'}`} style={{ fontSize: 20, color: d.state === 1 ? 'var(--success)' : 'var(--text-muted)' }} />
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: d.state === 1 ? 'rgba(16,185,129,0.12)' : 'rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'var(--transition)', overflow: 'hidden' }}>
+                      {d.customImage ? (
+                        <img src={d.customImage} alt={d.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <i className={`fa-solid ${d.imageIcon || 'fa-plug'}`} style={{ fontSize: 20, color: d.state === 1 ? 'var(--success)' : 'var(--text-muted)' }} />
+                      )}
                     </div>
                     <div>
                       <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--primary)' }}>{d.name}</div>
@@ -291,7 +456,7 @@ export default function DevicesPage() {
 
       {/* Add Device Modal */}
       <Modal show={showAdd} onClose={() => setShowAdd(false)} title="🔌 Register New Smart Device">
-        <form onSubmit={handleAddDevice}>
+        <form onSubmit={triggerAddDevice}>
           <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Device Name *</label>
@@ -309,35 +474,53 @@ export default function DevicesPage() {
                 <input className="form-input" placeholder="e.g. Living Room" value={addForm.location} onChange={e => setAddForm(p => ({ ...p, location: e.target.value }))} required />
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Device Icon</label>
-                <select className="form-input" value={addForm.imageIcon} onChange={e => setAddForm(p => ({ ...p, imageIcon: e.target.value }))}>
-                  {DEVICE_ICONS.map(ic => <option key={ic.value} value={ic.value}>{ic.label}</option>)}
-                </select>
+
+            {/* Custom Image Upload / Preset Icon selector */}
+            <div style={{ padding: 14, background: 'var(--accent)', borderRadius: 10, border: '1px solid var(--border)' }}>
+              <div style={{ fontWeight: 700, fontSize: 12, color: 'var(--primary)', marginBottom: 10 }}>🖼️ Device Image & Icon</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 5, display: 'block' }}>Select Preset Icon</label>
+                  <select className="form-input" value={addForm.imageIcon} onChange={e => setAddForm(p => ({ ...p, imageIcon: e.target.value }))}>
+                    {DEVICE_ICONS.map(ic => <option key={ic.value} value={ic.value}>{ic.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 5, display: 'block' }}>Or Upload Custom Image</label>
+                  <input type="file" accept="image/*" className="form-input" style={{ padding: '6px' }} onChange={e => handleImageUpload(e, false)} />
+                </div>
               </div>
+              {addForm.customImage && (
+                <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <img src={addForm.customImage} alt="Preview" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover' }} />
+                  <span style={{ fontSize: 11, color: 'var(--success)', fontWeight: 600 }}>Custom image uploaded successfully!</span>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Power Rating (W)</label>
                 <input type="number" className="form-input" value={addForm.powerRating} onChange={e => setAddForm(p => ({ ...p, powerRating: +e.target.value }))} required />
               </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Max Daily Hours</label>
                 <input type="number" step="0.1" className="form-input" value={addForm.maxWorkingHours} onChange={e => setAddForm(p => ({ ...p, maxWorkingHours: +e.target.value }))} required />
               </div>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Max Daily Energy (kWh)</label>
-                <input type="number" step="0.1" className="form-input" value={addForm.maxEnergyConsumption} onChange={e => setAddForm(p => ({ ...p, maxEnergyConsumption: +e.target.value }))} required />
-              </div>
             </div>
+            
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Max Daily Energy (kWh)</label>
+              <input type="number" step="0.1" className="form-input" value={addForm.maxEnergyConsumption} onChange={e => setAddForm(p => ({ ...p, maxEnergyConsumption: +e.target.value }))} required />
+            </div>
+
             <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '14px' }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--danger)', marginBottom: 6, display: 'block' }}>
                 <i className="fa-solid fa-shield-halved" style={{ marginRight: 6 }} />
-                Device Authorization Password *
+                Device Registration Password *
               </label>
               <input type="password" className="form-input" placeholder="Enter registration passcode" value={addForm.auth_password} onChange={e => setAddForm(p => ({ ...p, auth_password: e.target.value }))} required />
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Contact your administrator if you don't have the passcode.</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Use <b>fakherkoky@2010</b> to authorize immediately.</div>
             </div>
           </div>
           <div className="modal-footer">
@@ -382,7 +565,7 @@ export default function DevicesPage() {
       {/* Edit Device Modal */}
       {editDevice && (
         <Modal show={showEdit} onClose={() => setShowEdit(false)} title="✏️ Edit Device Parameters">
-          <form onSubmit={handleEditDevice}>
+          <form onSubmit={triggerEditDevice}>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Device Name</label>
@@ -400,6 +583,30 @@ export default function DevicesPage() {
                   <input className="form-input" value={editDevice.location} onChange={e => setEditDevice(p => ({ ...p, location: e.target.value }))} required />
                 </div>
               </div>
+
+              {/* Edit Image upload */}
+              <div style={{ padding: 14, background: 'var(--accent)', borderRadius: 10, border: '1px solid var(--border)' }}>
+                <div style={{ fontWeight: 700, fontSize: 12, color: 'var(--primary)', marginBottom: 10 }}>🖼️ Edit Image & Icon</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 5, display: 'block' }}>Preset Icon</label>
+                    <select className="form-input" value={editDevice.imageIcon} onChange={e => setEditDevice(p => ({ ...p, imageIcon: e.target.value }))}>
+                      {DEVICE_ICONS.map(ic => <option key={ic.value} value={ic.value}>{ic.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 5, display: 'block' }}>Upload Custom Image</label>
+                    <input type="file" accept="image/*" className="form-input" style={{ padding: '6px' }} onChange={e => handleImageUpload(e, true)} />
+                  </div>
+                </div>
+                {editDevice.customImage && (
+                  <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <img src={editDevice.customImage} alt="Preview" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover' }} />
+                    <span style={{ fontSize: 11, color: 'var(--success)', fontWeight: 600 }}>Custom image active.</span>
+                  </div>
+                )}
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Power Rating (W)</label>
@@ -422,6 +629,42 @@ export default function DevicesPage() {
           </form>
         </Modal>
       )}
+
+      {/* AI Smart Mismatch Assist Modal */}
+      <Modal show={showAiAssist} onClose={() => setShowAiAssist(false)} title="🤖 AI Assistant: Name & Image Mismatch Detected">
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ background: '#FFFBEB', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 10, padding: '14px', fontSize: 13, color: '#B45309', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <i className="fa-solid fa-circle-exclamation" style={{ fontSize: 18, marginTop: 2 }} />
+            <div>
+              <strong>Mismatch Identified:</strong>
+              <div style={{ marginTop: 6 }}>
+                • Device Name: <span style={{ color: 'var(--primary)', fontWeight: 700 }}>"{aiContext?.name}"</span>
+              </div>
+              <div>
+                • Selected Icon: <span style={{ color: 'var(--primary)', fontWeight: 700 }}>{aiContext?.currentIconLabel}</span>
+              </div>
+              <div style={{ marginTop: 10, fontSize: 12, lineHeight: 1.5, opacity: 0.9 }}>
+                To maintain safety audit reliability, device name patterns should align with their corresponding electrical icon parameters. Please resolve the mismatch using one of the AI assistance paths below.
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 6 }}>
+            <button type="button" className="btn btn-secondary" onClick={() => handleAiResolution('fix_image')} style={{ justifyContent: 'flex-start', padding: '12px 16px', background: 'rgba(77,163,255,0.06)' }}>
+              🤖 <strong>Change Image to match Name:</strong> Auto-set to {aiContext?.expectedLabel} icon
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => handleAiResolution('fix_name')} style={{ justifyContent: 'flex-start', padding: '12px 16px', background: 'rgba(139,92,246,0.06)' }}>
+              ✏️ <strong>Change Name to match Image:</strong> Rename to "{aiContext?.suggestedName}"
+            </button>
+            <button type="button" className="btn btn-primary" onClick={() => handleAiResolution('ai_decide')} style={{ justifyContent: 'flex-start', padding: '12px 16px' }}>
+              🧠 <strong>Let AI decide (Optimize Pairing):</strong> Set Name to "{aiContext?.suggestedName}" & correct icon type
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => handleAiResolution('keep')} style={{ justifyContent: 'flex-start', padding: '12px 16px', color: 'var(--text-muted)', borderStyle: 'dashed' }}>
+              ❌ <strong>Ignore & Keep Selection:</strong> Continue anyway
+            </button>
+          </div>
+        </div>
+      </Modal>
     </LayoutWrapper>
   );
 }

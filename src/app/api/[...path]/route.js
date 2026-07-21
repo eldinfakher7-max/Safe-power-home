@@ -162,7 +162,7 @@ export async function POST(request, { params }) {
   // 3. POST /api/devices
   if (routePath === 'devices') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
-    const { name, type, location, imageIcon, powerRating, maxWorkingHours, maxEnergyConsumption, auth_password, autoShutdown } = body;
+    const { name, type, location, imageIcon, customImage, customImageName, powerRating, maxWorkingHours, maxEnergyConsumption, auth_password, autoShutdown } = body;
     if (!name || !type || !location) return jsonResponse({ error: 'Name, type, and location are required.' }, 400);
     if (auth_password !== DEVICE_PASSWORD) return jsonResponse({ error: 'Incorrect device registration password.' }, 403);
 
@@ -171,6 +171,8 @@ export async function POST(request, { params }) {
       userId: user.id,
       name, type, location,
       imageIcon: imageIcon || 'fa-plug',
+      customImage: customImage || '',
+      customImageName: customImageName || '',
       powerRating: powerRating || 1000,
       maxWorkingHours: maxWorkingHours || 8,
       maxEnergyConsumption: maxEnergyConsumption || 10,
@@ -338,7 +340,7 @@ export async function PUT(request, { params }) {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
     const device = db.devices.find(d => d.id === pathSegments[1] && (user.userType === 'Admin' || d.userId === user.id));
     if (!device) return jsonResponse({ error: 'Device not found' }, 404);
-    const { name, type, location, power_rating, max_working_hours, max_energy_consumption, imageIcon, autoShutdown } = body;
+    const { name, type, location, power_rating, max_working_hours, max_energy_consumption, imageIcon, customImage, customImageName, autoShutdown } = body;
     if (name) device.name = name;
     if (type) device.type = type;
     if (location) device.location = location;
@@ -346,6 +348,8 @@ export async function PUT(request, { params }) {
     if (max_working_hours !== undefined) device.maxWorkingHours = max_working_hours;
     if (max_energy_consumption !== undefined) device.maxEnergyConsumption = max_energy_consumption;
     if (imageIcon) device.imageIcon = imageIcon;
+    if (customImage !== undefined) device.customImage = customImage;
+    if (customImageName !== undefined) device.customImageName = customImageName;
     if (autoShutdown !== undefined) device.autoShutdown = autoShutdown;
     await supabaseClient.upsertRecord('devices', device);
     return jsonResponse(device);

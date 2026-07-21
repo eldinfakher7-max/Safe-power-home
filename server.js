@@ -11,7 +11,7 @@ const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
 const JWT_SECRET = process.env.JWT_SECRET || 'smart_power_secret_key_9876';
-const DEVICE_PASSWORD = 'fakherk@2010';
+const DEVICE_PASSWORD = 'fakherkoky@2010';
 const PORT = parseInt(process.env.PORT || '3000');
 
 // ──────────────────────────────────────────
@@ -352,7 +352,7 @@ app.prepare().then(async () => {
 
   // POST /api/devices
   expressApp.post('/api/devices', auth, async (req, res) => {
-    const { name, type, location, imageIcon, powerRating, maxWorkingHours, maxEnergyConsumption, auth_password, autoShutdown } = req.body;
+    const { name, type, location, imageIcon, customImage, customImageName, powerRating, maxWorkingHours, maxEnergyConsumption, auth_password, autoShutdown } = req.body;
     if (!name || !type || !location) return res.status(400).json({ error: 'Name, type, and location are required.' });
     if (auth_password !== DEVICE_PASSWORD) return res.status(403).json({ error: 'Incorrect device registration password.' });
 
@@ -362,6 +362,8 @@ app.prepare().then(async () => {
       name, type,
       location,
       imageIcon: imageIcon || 'fa-plug',
+      customImage: customImage || '',
+      customImageName: customImageName || '',
       powerRating: powerRating || 1000,
       maxWorkingHours: maxWorkingHours || 8,
       maxEnergyConsumption: maxEnergyConsumption || 10,
@@ -387,7 +389,7 @@ app.prepare().then(async () => {
   expressApp.put('/api/devices/:id', auth, async (req, res) => {
     const device = db.devices.find(d => d.id === req.params.id && (req.user.userType === 'Admin' || d.userId === req.user.id));
     if (!device) return res.status(404).json({ error: 'Device not found.' });
-    const { name, type, location, power_rating, max_working_hours, max_energy_consumption, imageIcon, autoShutdown } = req.body;
+    const { name, type, location, power_rating, max_working_hours, max_energy_consumption, imageIcon, customImage, customImageName, autoShutdown } = req.body;
     if (name) device.name = name;
     if (type) device.type = type;
     if (location) device.location = location;
@@ -395,6 +397,8 @@ app.prepare().then(async () => {
     if (max_working_hours !== undefined) { device.maxWorkingHours = max_working_hours; device._hoursWarned = false; }
     if (max_energy_consumption !== undefined) { device.maxEnergyConsumption = max_energy_consumption; device._energyWarned = false; }
     if (imageIcon) device.imageIcon = imageIcon;
+    if (customImage !== undefined) device.customImage = customImage;
+    if (customImageName !== undefined) device.customImageName = customImageName;
     if (autoShutdown !== undefined) device.autoShutdown = autoShutdown;
     
     await supabaseClient.upsertRecord('devices', device);
