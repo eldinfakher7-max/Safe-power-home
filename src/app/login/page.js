@@ -31,7 +31,8 @@ export default function LoginPage() {
         setError(data.error || 'Login failed. Please try again.');
       }
     } catch (err) {
-      setError('Connection error. Please check your network.');
+      console.error('Login error:', err);
+      setError(err.message || 'Connection error. Please check your network.');
     } finally {
       setLoading(false);
     }

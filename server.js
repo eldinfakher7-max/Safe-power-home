@@ -229,6 +229,8 @@ app.prepare().then(async () => {
   const server = http.createServer(expressApp);
   const io = new Server(server, { cors: { origin: '*' } });
 
+  const cors = require('cors');
+  expressApp.use(cors());
   expressApp.use(express.json());
 
   // ──────────────────────────────────────────

@@ -6,20 +6,23 @@ const supabaseKey = process.env.SUPABASE_KEY;
 let supabase = null;
 let isConfigured = false;
 
-if (supabaseUrl && supabaseKey) {
+// Only initialize if URL is real (not placeholder)
+const isRealUrl = supabaseUrl && supabaseUrl.includes('.supabase.co') && !supabaseUrl.includes('your-project-id');
+
+if (isRealUrl && supabaseKey) {
   try {
     supabase = createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        persistSession: false
-      }
+      auth: { persistSession: false }
     });
     isConfigured = true;
     console.log('🔌 Supabase client initialized successfully.');
+    console.log('   ➜  URL:', supabaseUrl);
   } catch (err) {
     console.error('❌ Failed to initialize Supabase client:', err.message);
   }
 } else {
-  console.log('⚠️ Supabase URL or Key not set. Running in Local Memory Database mode.');
+  console.log('⚠️  Supabase not configured. Running in Local Memory DB mode.');
+  console.log('   ➜  To enable Supabase: set SUPABASE_URL in .env');
 }
 
 module.exports = {
