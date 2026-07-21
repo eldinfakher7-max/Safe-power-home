@@ -32,6 +32,89 @@ const APPLIANCE_MAPPINGS = [
   { keywords: ['microwave', 'oven', 'stove', 'cooker'], label: 'Microwave / Oven', icon: 'fa-fire-burner' },
 ];
 
+const PRESET_LIBRARY_DEVICES = [
+  {
+    name: 'Samsung Twin Cooling Refrigerator',
+    brand: 'Samsung',
+    type: 'Refrigerator',
+    imageIcon: 'fa-snowflake',
+    powerRating: 350,
+    maxWorkingHours: 24,
+    maxEnergyConsumption: 8.4,
+    description: 'Smart refrigerator with auto temperature control & Twin Cooling System.'
+  },
+  {
+    name: 'LG Dual Inverter Air Conditioner',
+    brand: 'LG',
+    type: 'AC',
+    imageIcon: 'fa-wind',
+    powerRating: 1450,
+    maxWorkingHours: 10,
+    maxEnergyConsumption: 14.5,
+    description: 'Energy-saving air conditioner with active cooling control and Dual Inverter technology.'
+  },
+  {
+    name: 'Ariston Pro1 Eco Water Heater',
+    brand: 'Ariston',
+    type: 'Water Heater',
+    imageIcon: 'fa-faucet-drip',
+    powerRating: 2000,
+    maxWorkingHours: 4,
+    maxEnergyConsumption: 8.0,
+    description: 'Eco Evo smart function water heater with absolute safety system.'
+  },
+  {
+    name: 'Sony Bravia 4K Smart TV',
+    brand: 'Sony',
+    type: 'TV',
+    imageIcon: 'fa-tv',
+    powerRating: 150,
+    maxWorkingHours: 6,
+    maxEnergyConsumption: 0.9,
+    description: 'Vivid color low power LED screen with HDR processor.'
+  },
+  {
+    name: 'Tesla Wall Connector EV Charger',
+    brand: 'Tesla',
+    type: 'EV Charger',
+    imageIcon: 'fa-car-battery',
+    powerRating: 7400,
+    maxWorkingHours: 5,
+    maxEnergyConsumption: 37.0,
+    description: 'Fast home EV charging connector compatible with all electric vehicles.'
+  },
+  {
+    name: 'Philips Hue Smart LED Bulb',
+    brand: 'Philips',
+    type: 'Lighting',
+    imageIcon: 'fa-lightbulb',
+    powerRating: 9,
+    maxWorkingHours: 12,
+    maxEnergyConsumption: 0.11,
+    description: 'Smart dimmable RGB lighting control with home automation integration.'
+  },
+  {
+    name: 'Bosch Series 6 Washing Machine',
+    brand: 'Bosch',
+    type: 'Washer',
+    imageIcon: 'fa-shirt',
+    powerRating: 2200,
+    maxWorkingHours: 2,
+    maxEnergyConsumption: 4.4,
+    description: 'EcoSilence Drive silent washing with SpeedPerfect option.'
+  },
+  {
+    name: 'Dell OptiPlex Workstation PC',
+    brand: 'Dell',
+    type: 'Computer',
+    imageIcon: 'fa-desktop',
+    powerRating: 250,
+    maxWorkingHours: 8,
+    maxEnergyConsumption: 2.0,
+    description: 'Standard office workstation with intelligent audio and express response.'
+  }
+];
+
 function Modal({ show, onClose, title, children }) {
   if (!show) return null;
   return (
@@ -61,6 +144,10 @@ export default function DevicesPage() {
   // AI Mismatch Assist States
   const [showAiAssist, setShowAiAssist] = useState(false);
   const [aiContext, setAiContext] = useState(null);
+
+  // Preset Selection flow states
+  const [selectedPresetItem, setSelectedPresetItem] = useState(null);
+  const [showPresetDetails, setShowPresetDetails] = useState(false);
 
   const [addForm, setAddForm] = useState({
     name: '',
@@ -458,6 +545,49 @@ export default function DevicesPage() {
       <Modal show={showAdd} onClose={() => setShowAdd(false)} title="🔌 Register New Smart Device">
         <form onSubmit={triggerAddDevice}>
           <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Quick Pick Device Library Section */}
+            <div style={{ padding: '14px', background: 'rgba(77,163,255,0.06)', borderRadius: 12, border: '1px solid rgba(77,163,255,0.15)', marginBottom: 6 }}>
+              <div style={{ fontWeight: 800, fontSize: 13, color: 'var(--primary)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <i className="fa-solid fa-wand-magic-sparkles" style={{ color: 'var(--secondary)' }} />
+                AI Pre-Configured Device Library
+              </div>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>
+                Select a standard device template below to automatically configure optimal power limit parameters.
+              </p>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10, maxHeight: 150, overflowY: 'auto', paddingRight: 4 }}>
+                {PRESET_LIBRARY_DEVICES.map((item) => (
+                  <div
+                    key={item.name}
+                    onClick={() => {
+                      setSelectedPresetItem(item);
+                      setShowPresetDetails(true);
+                    }}
+                    style={{
+                      padding: 10,
+                      borderRadius: 10,
+                      background: 'var(--card-bg, #ffffff)',
+                      border: '1px solid var(--border)',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      transition: 'all 0.2s ease',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                    }}
+                  >
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(77,163,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', fontSize: 14, color: 'var(--secondary)' }}>
+                      <i className={`fa-solid ${item.imageIcon}`} />
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 11, color: 'var(--primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {item.name}
+                    </div>
+                    <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>
+                      {item.brand}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Device Name *</label>
               <input className="form-input" placeholder="e.g. Living Room Air Conditioner" value={addForm.name} onChange={e => setAddForm(p => ({ ...p, name: e.target.value }))} required />
@@ -665,6 +795,68 @@ export default function DevicesPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Preset Details Modal */}
+      {selectedPresetItem && (
+        <Modal show={showPresetDetails} onClose={() => setShowPresetDetails(false)} title="📋 Review Pre-Configured Device Details">
+          <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, background: 'var(--accent)', borderRadius: 12, border: '1px solid var(--border)' }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(77,163,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: 'var(--secondary)' }}>
+                <i className={`fa-solid ${selectedPresetItem.imageIcon}`} />
+              </div>
+              <div>
+                <h4 style={{ fontSize: 14, fontWeight: 800, color: 'var(--primary)' }}>{selectedPresetItem.name}</h4>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{selectedPresetItem.type}</p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--accent)', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12 }}>
+                <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Brand</span>
+                <strong style={{ color: 'var(--primary)' }}>{selectedPresetItem.brand}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--accent)', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12 }}>
+                <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Maximum Operating Time</span>
+                <strong style={{ color: 'var(--primary)' }}>{selectedPresetItem.maxWorkingHours} hours/day</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--accent)', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12 }}>
+                <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Maximum Watt Consumption</span>
+                <strong style={{ color: 'var(--primary)' }}>{selectedPresetItem.powerRating} W</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--accent)', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12 }}>
+                <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Recommended Max Energy</span>
+                <strong style={{ color: 'var(--primary)' }}>{selectedPresetItem.maxEnergyConsumption} kWh/day</strong>
+              </div>
+            </div>
+
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              {selectedPresetItem.description}
+            </p>
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="btn btn-secondary" onClick={() => setShowPresetDetails(false)}>Cancel</button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                setAddForm(p => ({
+                  ...p,
+                  name: selectedPresetItem.name,
+                  type: selectedPresetItem.type,
+                  imageIcon: selectedPresetItem.imageIcon,
+                  powerRating: selectedPresetItem.powerRating,
+                  maxWorkingHours: selectedPresetItem.maxWorkingHours,
+                  maxEnergyConsumption: selectedPresetItem.maxEnergyConsumption
+                }));
+                setShowPresetDetails(false);
+                showAlert(`Selected ${selectedPresetItem.name}! Form pre-filled successfully.`, 'success');
+              }}
+            >
+              <i className="fa-solid fa-circle-check" /> Confirm Device
+            </button>
+          </div>
+        </Modal>
+      )}
     </LayoutWrapper>
   );
 }
