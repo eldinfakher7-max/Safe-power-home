@@ -852,6 +852,8 @@ export default function DevicesPage() {
                   name: selectedPresetItem.name,
                   type: selectedPresetItem.type,
                   imageIcon: selectedPresetItem.imageIcon,
+                  customImage: selectedPresetItem.imageUrl,
+                  customImageName: selectedPresetItem.name + '.jpg',
                   powerRating: selectedPresetItem.powerRating,
                   maxWorkingHours: selectedPresetItem.maxWorkingHours,
                   maxEnergyConsumption: selectedPresetItem.maxEnergyConsumption
