@@ -115,14 +115,7 @@ export default function LoginPage() {
           <Link href="/signup" style={{ color: 'var(--secondary)', fontWeight: 700, textDecoration: 'none' }}>Create Account</Link>
         </div>
 
-        {/* Demo credentials */}
-        <div style={{ marginTop: 24, padding: 14, background: 'rgba(77,163,255,0.08)', borderRadius: 10, border: '1px solid rgba(77,163,255,0.2)', fontSize: 12 }}>
-          <div style={{ fontWeight: 700, color: 'var(--primary)', marginBottom: 6 }}>🔑 Demo Accounts</div>
-          <div style={{ color: 'var(--text-muted)', lineHeight: 1.8 }}>
-            <div><b>Admin:</b> admin@smartpowerhome.com / Admin123</div>
-            <div><b>User:</b> user@smartpowerhome.com / User123</div>
-          </div>
-        </div>
+
       </div>
     </div>
   );
