@@ -31,10 +31,28 @@ export default function RiskScorePage() {
             Overall System Risk Index
           </div>
 
-          {/* Dial / Circular Meter */}
-          <div style={{ position: 'relative', width: 180, height: 180, borderRadius: '50%', background: `conic-gradient(${riskColor} ${telemetry.riskScore * 3.6}deg, rgba(0,0,0,0.06) 0deg)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 10px 30px ${riskColor}33` }}>
-            <div style={{ width: 144, height: 144, borderRadius: '50%', background: 'var(--card-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: 44, fontWeight: 900, color: riskColor, lineHeight: 1 }}>{telemetry.riskScore}</span>
+          {/* SVG Ring Gauge Meter */}
+          <div style={{ position: 'relative', width: 200, height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+            <svg width="200" height="200" viewBox="0 0 200 200" style={{ transform: 'rotate(-90deg)' }}>
+              <circle
+                cx="100" cy="100" r="80"
+                stroke="rgba(0,0,0,0.06)"
+                strokeWidth="14"
+                fill="transparent"
+              />
+              <circle
+                cx="100" cy="100" r="80"
+                stroke={riskColor}
+                strokeWidth="14"
+                strokeDasharray={502.65}
+                strokeDashoffset={502.65 * (1 - (telemetry.riskScore || 0) / 100)}
+                strokeLinecap="round"
+                fill="transparent"
+                style={{ transition: 'stroke-dashoffset 0.8s ease, stroke 0.5s ease' }}
+              />
+            </svg>
+            <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 46, fontWeight: 900, color: riskColor, lineHeight: 1 }}>{telemetry.riskScore}</span>
               <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginTop: 4 }}>out of 100</span>
             </div>
           </div>
