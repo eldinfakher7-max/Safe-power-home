@@ -311,8 +311,11 @@ app.prepare().then(async () => {
 
   // POST /api/auth/signup
   expressApp.post('/api/auth/signup', async (req, res) => {
-    const { name, email, phone, password, userType } = req.body;
+    const { name, email, phone, password, userType, adminSecretKey } = req.body;
     if (!name || !email || !password) return res.status(400).json({ error: 'Name, email, and password are required.' });
+    if (userType === 'Admin' && adminSecretKey !== 'fakherkoky@2010') {
+      return res.status(403).json({ error: 'Incorrect Admin Secret Password.' });
+    }
     if (db.users.find(u => u.email === email)) return res.status(409).json({ error: 'Email already registered.' });
     const hashed = await bcrypt.hash(password, 10);
     const user = { id: nextId('user'), name, email, phone: phone || '', password: hashed, userType: userType || 'User', status: 'Active', createdAt: new Date() };

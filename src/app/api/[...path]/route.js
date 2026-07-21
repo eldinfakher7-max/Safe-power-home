@@ -133,8 +133,11 @@ export async function POST(request, { params }) {
 
   // 1. POST /api/auth/signup
   if (routePath === 'auth/signup') {
-    const { name, email, phone, password, userType } = body;
+    const { name, email, phone, password, userType, adminSecretKey } = body;
     if (!name || !email || !password) return jsonResponse({ error: 'Name, email, and password are required.' }, 400);
+    if (userType === 'Admin' && adminSecretKey !== 'fakherkoky@2010') {
+      return jsonResponse({ error: 'Incorrect Admin Secret Password.' }, 403);
+    }
     if (db.users.find(u => u.email === email)) return jsonResponse({ error: 'Email already registered.' }, 409);
     const hashed = await bcrypt.hash(password, 10);
     const newUser = { id: nextId('user'), name, email, phone: phone || '', password: hashed, userType: userType || 'User', status: 'Active', createdAt: new Date().toISOString() };

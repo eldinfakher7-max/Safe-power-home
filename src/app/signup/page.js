@@ -5,14 +5,25 @@ import Link from 'next/link';
 
 export default function SignupPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '', userType: 'User' });
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+    userType: 'User',
+    adminSecretKey: ''
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const ADMIN_SECRET = 'fakherkoky@2010';
+
   async function handleSignup(e) {
     e.preventDefault();
     setError('');
+    
     if (form.password !== form.confirmPassword) {
       setError('Passwords do not match.');
       return;
@@ -21,6 +32,11 @@ export default function SignupPage() {
       setError('Password must be at least 6 characters.');
       return;
     }
+    if (form.userType === 'Admin' && form.adminSecretKey !== ADMIN_SECRET) {
+      setError('Incorrect Admin Secret Password. You cannot register as System Administrator.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -56,14 +72,14 @@ export default function SignupPage() {
         </div>
 
         {error && (
-          <div style={{ background: '#FEE2E2', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#DC2626', marginBottom: 16, display: 'flex', gap: 8 }}>
-            <i className="fa-solid fa-circle-exclamation" style={{ marginTop: 2 }} /> {error}
+          <div style={{ background: '#FEE2E2', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#DC2626', marginBottom: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
+            <i className="fa-solid fa-circle-exclamation" /> {error}
           </div>
         )}
 
         {success && (
-          <div style={{ background: '#DCFCE7', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#15803D', marginBottom: 16, display: 'flex', gap: 8 }}>
-            <i className="fa-solid fa-circle-check" style={{ marginTop: 2 }} /> {success}
+          <div style={{ background: '#DCFCE7', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#15803D', marginBottom: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
+            <i className="fa-solid fa-circle-check" /> {success}
           </div>
         )}
 
@@ -95,13 +111,34 @@ export default function SignupPage() {
             </div>
           </div>
 
-          <div style={{ marginBottom: 24 }}>
+          <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Account Type</label>
             <select className="form-input" value={form.userType} onChange={e => setForm(p => ({ ...p, userType: e.target.value }))}>
               <option value="User">Standard User</option>
               <option value="Admin">System Administrator</option>
             </select>
           </div>
+
+          {/* Secret Admin Key Field */}
+          {form.userType === 'Admin' && (
+            <div style={{ marginBottom: 20, padding: 14, background: 'rgba(30,58,138,0.06)', borderRadius: 10, border: '1px solid rgba(30,58,138,0.2)' }}>
+              <label style={{ fontSize: 12, fontWeight: 800, color: 'var(--primary)', marginBottom: 6, display: 'block' }}>
+                <i className="fa-solid fa-key" style={{ marginRight: 6, color: 'var(--secondary)' }} />
+                Admin Secret Password
+              </label>
+              <input
+                type="password"
+                className="form-input"
+                placeholder="Enter admin authorization key..."
+                value={form.adminSecretKey}
+                onChange={e => setForm(p => ({ ...p, adminSecretKey: e.target.value }))}
+                required
+              />
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginTop: 4 }}>
+                Secret authorization password is required to create a System Administrator account.
+              </span>
+            </div>
+          )}
 
           <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: 15, borderRadius: 12 }}>
             {loading ? (
