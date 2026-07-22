@@ -389,7 +389,7 @@ app.prepare().then(async () => {
   expressApp.put('/api/devices/:id', auth, async (req, res) => {
     const device = db.devices.find(d => d.id === req.params.id && (req.user.userType === 'Admin' || d.userId === req.user.id));
     if (!device) return res.status(404).json({ error: 'Device not found.' });
-    const { name, type, location, power_rating, max_working_hours, max_energy_consumption, imageIcon, customImage, customImageName, autoShutdown } = req.body;
+    const { name, type, location, power_rating, max_working_hours, max_energy_consumption, imageIcon, customImage, customImageName, autoShutdown, currentWorkingHours, currentConsumption } = req.body;
     if (name) device.name = name;
     if (type) device.type = type;
     if (location) device.location = location;
@@ -400,6 +400,8 @@ app.prepare().then(async () => {
     if (customImage !== undefined) device.customImage = customImage;
     if (customImageName !== undefined) device.customImageName = customImageName;
     if (autoShutdown !== undefined) device.autoShutdown = autoShutdown;
+    if (currentWorkingHours !== undefined) device.currentWorkingHours = currentWorkingHours;
+    if (currentConsumption !== undefined) device.currentConsumption = currentConsumption;
     
     await supabaseClient.upsertRecord('devices', device);
     io.emit('device_metrics_updated');

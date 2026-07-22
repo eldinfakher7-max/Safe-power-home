@@ -184,7 +184,52 @@ export default function DevicesPage() {
       showAlert(data.message, 'danger');
     });
 
-    return () => { if (socket) socket.disconnect(); };
+    // Client-side real-time simulated metric updates (every 3 seconds)
+    const interval = setInterval(() => {
+      setDevices(prevDevices => {
+        let changed = false;
+        const updated = prevDevices.map(d => {
+          if (d.state === 1) {
+            // Simulate 0.05 hours (3 minutes) of usage every 3 seconds for visible feedback
+            const elapsed = 0.05;
+            const kw = (d.powerRating || 1000) / 1000;
+            const energy = kw * elapsed;
+            changed = true;
+
+            const updatedDevice = {
+              ...d,
+              currentWorkingHours: (d.currentWorkingHours || 0) + elapsed,
+              currentConsumption: (d.currentConsumption || 0) + energy,
+              todayConsumption: (d.todayConsumption || 0) + energy,
+              monthlyConsumption: (d.monthlyConsumption || 0) + energy
+            };
+
+            // Non-blocking sync to server
+            fetch(`/api/devices/${d._id || d.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify({
+                power_rating: d.powerRating,
+                max_working_hours: d.maxWorkingHours,
+                max_energy_consumption: d.maxEnergyConsumption,
+                currentWorkingHours: updatedDevice.currentWorkingHours,
+                currentConsumption: updatedDevice.currentConsumption
+              })
+            }).catch(() => {});
+
+            return updatedDevice;
+          }
+          return d;
+        });
+
+        return updated;
+      });
+    }, 3000);
+
+    return () => {
+      if (socket) socket.disconnect();
+      clearInterval(interval);
+    };
   }, []);
 
   async function loadDevices() {

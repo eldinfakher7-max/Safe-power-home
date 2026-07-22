@@ -340,7 +340,7 @@ export async function PUT(request, { params }) {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
     const device = db.devices.find(d => d.id === pathSegments[1] && (user.userType === 'Admin' || d.userId === user.id));
     if (!device) return jsonResponse({ error: 'Device not found' }, 404);
-    const { name, type, location, power_rating, max_working_hours, max_energy_consumption, imageIcon, customImage, customImageName, autoShutdown } = body;
+    const { name, type, location, power_rating, max_working_hours, max_energy_consumption, imageIcon, customImage, customImageName, autoShutdown, currentWorkingHours, currentConsumption } = body;
     if (name) device.name = name;
     if (type) device.type = type;
     if (location) device.location = location;
@@ -351,6 +351,8 @@ export async function PUT(request, { params }) {
     if (customImage !== undefined) device.customImage = customImage;
     if (customImageName !== undefined) device.customImageName = customImageName;
     if (autoShutdown !== undefined) device.autoShutdown = autoShutdown;
+    if (currentWorkingHours !== undefined) device.currentWorkingHours = currentWorkingHours;
+    if (currentConsumption !== undefined) device.currentConsumption = currentConsumption;
     await supabaseClient.upsertRecord('devices', device);
     return jsonResponse(device);
   }
