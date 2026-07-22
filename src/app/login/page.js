@@ -59,14 +59,14 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin}>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Email Address</label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Email or Phone Number</label>
             <div style={{ position: 'relative' }}>
-              <i className="fa-solid fa-envelope" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 14 }} />
+              <i className="fa-solid fa-user" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 14 }} />
               <input
-                type="email"
+                type="text"
                 className="form-input"
                 style={{ paddingLeft: 38 }}
-                placeholder="admin@smartpowerhome.com"
+                placeholder="Enter email or phone number..."
                 value={form.email}
                 onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
                 required

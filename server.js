@@ -328,8 +328,12 @@ app.prepare().then(async () => {
   // POST /api/auth/login
   expressApp.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
-    const user = db.users.find(u => u.email === email);
-    if (!user) return res.status(401).json({ error: 'Invalid email or password.' });
+    const normalizedInput = (email || '').trim().toLowerCase();
+    const user = db.users.find(u => 
+      u.email.toLowerCase() === normalizedInput || 
+      (u.phone && u.phone.replace(/\s+/g, '') === normalizedInput.replace(/\s+/g, ''))
+    );
+    if (!user) return res.status(401).json({ error: 'Invalid email/phone or password.' });
     if (user.status === 'Suspended') return res.status(403).json({ error: 'Your account has been suspended. Contact the administrator.' });
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ error: 'Invalid email or password.' });

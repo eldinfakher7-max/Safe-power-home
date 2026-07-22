@@ -149,8 +149,12 @@ export async function POST(request, { params }) {
   // 2. POST /api/auth/login
   if (routePath === 'auth/login') {
     const { email, password } = body;
-    const existingUser = db.users.find(u => u.email === email);
-    if (!existingUser) return jsonResponse({ error: 'Invalid email or password.' }, 401);
+    const normalizedInput = (email || '').trim().toLowerCase();
+    const existingUser = db.users.find(u => 
+      u.email.toLowerCase() === normalizedInput || 
+      (u.phone && u.phone.replace(/\s+/g, '') === normalizedInput.replace(/\s+/g, ''))
+    );
+    if (!existingUser) return jsonResponse({ error: 'Invalid email/phone or password.' }, 401);
     if (existingUser.status === 'Suspended') return jsonResponse({ error: 'Your account has been suspended. Contact administrator.' }, 403);
     const valid = await bcrypt.compare(password, existingUser.password);
     if (!valid) return jsonResponse({ error: 'Invalid email or password.' }, 401);
