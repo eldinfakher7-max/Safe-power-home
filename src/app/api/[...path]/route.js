@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { db, initStore, verifyAuth, nextId, complaintId, JWT_SECRET, DEVICE_PASSWORD } from '@/lib/backendStore';
+import { db, initStore, refreshTable, verifyAuth, nextId, complaintId, JWT_SECRET, DEVICE_PASSWORD } from '@/lib/backendStore';
 import supabaseClient from '@/lib/supabase';
 
 // Helper for JSON response with CORS headers
@@ -30,6 +30,7 @@ export async function GET(request, { params }) {
   // 1. GET /api/devices
   if (routePath === 'devices') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    await refreshTable('devices');
     const devices = user.userType === 'Admin' ? db.devices : db.devices.filter(d => d.userId === user.id);
     return jsonResponse(devices);
   }
@@ -37,6 +38,7 @@ export async function GET(request, { params }) {
   // 2. GET /api/notifications
   if (routePath === 'notifications') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    await refreshTable('notifications');
     const userNotifs = user.userType === 'Admin' ? db.notifications : db.notifications.filter(n => n.userId === user.id);
     return jsonResponse(userNotifs.slice().reverse().slice(0, 50));
   }
@@ -44,6 +46,7 @@ export async function GET(request, { params }) {
   // 3. GET /api/alerts
   if (routePath === 'alerts') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    await refreshTable('alerts');
     const userAlerts = user.userType === 'Admin' ? db.alerts : db.alerts.filter(a => !a.userId || a.userId === user.id);
     return jsonResponse(userAlerts.slice().reverse());
   }
@@ -51,6 +54,7 @@ export async function GET(request, { params }) {
   // 4. GET /api/complaints
   if (routePath === 'complaints') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    await refreshTable('complaints');
     const list = user.userType === 'Admin' ? db.complaints : db.complaints.filter(c => c.userId === user.id);
     return jsonResponse(list.slice().reverse());
   }
@@ -133,6 +137,7 @@ export async function POST(request, { params }) {
 
   // 1. POST /api/auth/signup
   if (routePath === 'auth/signup') {
+    await refreshTable('users');
     const { name, email, phone, password, userType, adminSecretKey } = body;
     if (!name || !email || !password) return jsonResponse({ error: 'Name, email, and password are required.' }, 400);
     if (userType === 'Admin' && adminSecretKey !== 'fakherkoky@2010') {
@@ -148,6 +153,7 @@ export async function POST(request, { params }) {
 
   // 2. POST /api/auth/login
   if (routePath === 'auth/login') {
+    await refreshTable('users');
     const { email, password } = body;
     const normalizedInput = (email || '').trim().toLowerCase();
     const existingUser = db.users.find(u => 
@@ -166,6 +172,7 @@ export async function POST(request, { params }) {
   // 3. POST /api/devices
   if (routePath === 'devices') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    await refreshTable('devices');
     const { name, type, location, imageIcon, customImage, customImageName, powerRating, maxWorkingHours, maxEnergyConsumption, auth_password, autoShutdown } = body;
     if (!name || !type || !location) return jsonResponse({ error: 'Name, type, and location are required.' }, 400);
     if (auth_password !== DEVICE_PASSWORD) return jsonResponse({ error: 'Incorrect device registration password.' }, 403);
@@ -196,6 +203,7 @@ export async function POST(request, { params }) {
   // 4. POST /api/devices/:id/toggle
   if (pathSegments.length === 3 && pathSegments[0] === 'devices' && pathSegments[2] === 'toggle') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    await refreshTable('devices');
     const device = db.devices.find(d => d.id === pathSegments[1] && (user.userType === 'Admin' || d.userId === user.id));
     if (!device) return jsonResponse({ error: 'Device not found.' }, 404);
     const newState = body.state !== undefined ? body.state : (device.state === 1 ? 0 : 1);
@@ -207,6 +215,7 @@ export async function POST(request, { params }) {
   // 5. POST /api/devices/:id/restart
   if (pathSegments.length === 3 && pathSegments[0] === 'devices' && pathSegments[2] === 'restart') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    await refreshTable('devices');
     const device = db.devices.find(d => d.id === pathSegments[1] && (user.userType === 'Admin' || d.userId === user.id));
     if (!device) return jsonResponse({ error: 'Device not found.' }, 404);
     device.currentWorkingHours = 0;
@@ -342,6 +351,7 @@ export async function PUT(request, { params }) {
   // 1. PUT /api/devices/:id
   if (pathSegments.length === 2 && pathSegments[0] === 'devices') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    await refreshTable('devices');
     const device = db.devices.find(d => d.id === pathSegments[1] && (user.userType === 'Admin' || d.userId === user.id));
     if (!device) return jsonResponse({ error: 'Device not found' }, 404);
     const { name, type, location, power_rating, max_working_hours, max_energy_consumption, imageIcon, customImage, customImageName, autoShutdown, currentWorkingHours, currentConsumption } = body;
@@ -364,6 +374,7 @@ export async function PUT(request, { params }) {
   // 2. PUT /api/alerts/:id/resolve
   if (pathSegments.length === 3 && pathSegments[0] === 'alerts' && pathSegments[2] === 'resolve') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    await refreshTable('alerts');
     const alert = db.alerts.find(a => a.id === pathSegments[1]);
     if (!alert) return jsonResponse({ error: 'Alert not found' }, 404);
     alert.status = 'Resolved';
@@ -374,6 +385,7 @@ export async function PUT(request, { params }) {
   // 3. PUT /api/complaints/:cid
   if (pathSegments.length === 2 && pathSegments[0] === 'complaints') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    await refreshTable('complaints');
     const complaint = db.complaints.find(c => c.complaintId === pathSegments[1]);
     if (!complaint) return jsonResponse({ error: 'Complaint not found' }, 404);
     if (body.status) complaint.status = body.status;
@@ -385,6 +397,7 @@ export async function PUT(request, { params }) {
   // 4. PUT /api/profile/update
   if (routePath === 'profile/update') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    await refreshTable('users');
     const existingUser = db.users.find(u => u.id === user.id);
     if (!existingUser) return jsonResponse({ error: 'User not found' }, 404);
     if (body.name) existingUser.name = body.name;
@@ -407,6 +420,7 @@ export async function DELETE(request, { params }) {
   // 1. DELETE /api/devices/:id
   if (pathSegments.length === 2 && pathSegments[0] === 'devices') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    await refreshTable('devices');
     const idx = db.devices.findIndex(d => d.id === pathSegments[1] && (user.userType === 'Admin' || d.userId === user.id));
     if (idx === -1) return jsonResponse({ error: 'Device not found' }, 404);
     db.devices.splice(idx, 1);
@@ -417,6 +431,7 @@ export async function DELETE(request, { params }) {
   // 2. DELETE /api/complaints/:cid
   if (pathSegments.length === 2 && pathSegments[0] === 'complaints') {
     if (!user || user.userType !== 'Admin') return jsonResponse({ error: 'Admin only' }, 403);
+    await refreshTable('complaints');
     const idx = db.complaints.findIndex(c => c.complaintId === pathSegments[1]);
     if (idx === -1) return jsonResponse({ error: 'Complaint not found' }, 404);
     db.complaints.splice(idx, 1);

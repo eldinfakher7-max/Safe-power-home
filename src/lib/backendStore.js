@@ -20,6 +20,42 @@ let db = {
 let initialized = false;
 let idCounters = { user: 1, device: 1, alert: 1, complaint: 1, authReq: 1, notif: 1 };
 
+const tableMap = {
+  users: 'user',
+  devices: 'device',
+  alerts: 'alert',
+  complaints: 'complaint',
+  auth_requests: 'authReq',
+  notifications: 'notif'
+};
+
+function updateCounter(list, key) {
+  if (list && list.length > 0) {
+    const ids = list.map(item => {
+      const m = (item.id || '').match(/\d+/);
+      return m ? parseInt(m[0]) : 0;
+    });
+    idCounters[key] = Math.max(0, ...ids) + 1;
+  }
+}
+
+async function refreshTable(tableName) {
+  if (!supabaseClient.isConfigured()) return;
+  try {
+    const listName = tableName === 'auth_requests' ? 'authRequests' : (tableName === 'complaint_messages' ? 'complaintMessages' : tableName);
+    const data = await supabaseClient.fetchTable(tableName);
+    if (data) {
+      db[listName] = data;
+      const key = tableMap[tableName];
+      if (key) {
+        updateCounter(data, key);
+      }
+    }
+  } catch (err) {
+    console.error(`Error refreshing ${tableName}:`, err.message);
+  }
+}
+
 function nextId(type) {
   return `${type}_${idCounters[type]++}`;
 }
@@ -65,6 +101,14 @@ async function initStore() {
           db.settings[item.key] = item.value;
         });
       }
+      
+      // Update local ID counters to avoid collisions
+      updateCounter(db.users, 'user');
+      updateCounter(db.devices, 'device');
+      updateCounter(db.alerts, 'alert');
+      updateCounter(db.complaints, 'complaint');
+      updateCounter(db.authRequests, 'authReq');
+      updateCounter(db.notifications, 'notif');
     } catch (err) {
       console.error('Supabase sync error:', err.message);
     }
@@ -133,6 +177,7 @@ function verifyAuth(authHeader) {
 module.exports = {
   db,
   initStore,
+  refreshTable,
   verifyAuth,
   nextId,
   complaintId,
