@@ -316,9 +316,23 @@ app.prepare().then(async () => {
     if (userType === 'Admin' && adminSecretKey !== 'fakherkoky@2010') {
       return res.status(403).json({ error: 'Incorrect Admin Secret Password.' });
     }
-    if (db.users.find(u => u.email === email)) return res.status(409).json({ error: 'Email already registered.' });
+
+    const trimmedName = (name || '').trim();
+    const trimmedEmail = (email || '').trim().toLowerCase();
+    const cleanedPhone = (phone || '').replace(/\s+/g, '');
+
+    if (db.users.some(u => (u.name || '').trim().toLowerCase() === trimmedName.toLowerCase())) {
+      return res.status(409).json({ error: 'Username / Full Name is already taken.' });
+    }
+    if (db.users.some(u => (u.email || '').trim().toLowerCase() === trimmedEmail)) {
+      return res.status(409).json({ error: 'Email address is already registered.' });
+    }
+    if (cleanedPhone && db.users.some(u => u.phone && u.phone.replace(/\s+/g, '') === cleanedPhone)) {
+      return res.status(409).json({ error: 'Phone number is already registered.' });
+    }
+
     const hashed = await bcrypt.hash(password, 10);
-    const user = { id: nextId('user'), name, email, phone: phone || '', password: hashed, userType: userType || 'User', status: 'Active', createdAt: new Date() };
+    const user = { id: nextId('user'), name: trimmedName, email: trimmedEmail, phone: phone || '', password: hashed, userType: userType || 'User', status: 'Active', createdAt: new Date() };
     db.users.push(user);
     await supabaseClient.upsertRecord('users', user);
     await addNotification(user.id, `Welcome to Smart Power Home AI, ${name}! Your account is ready.`, 'Info');

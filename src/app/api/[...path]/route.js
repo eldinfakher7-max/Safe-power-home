@@ -143,9 +143,23 @@ export async function POST(request, { params }) {
     if (userType === 'Admin' && adminSecretKey !== 'fakherkoky@2010') {
       return jsonResponse({ error: 'Incorrect Admin Secret Password.' }, 403);
     }
-    if (db.users.find(u => u.email === email)) return jsonResponse({ error: 'Email already registered.' }, 409);
+    
+    const trimmedName = (name || '').trim();
+    const trimmedEmail = (email || '').trim().toLowerCase();
+    const cleanedPhone = (phone || '').replace(/\s+/g, '');
+
+    if (db.users.some(u => (u.name || '').trim().toLowerCase() === trimmedName.toLowerCase())) {
+      return jsonResponse({ error: 'Username / Full Name is already taken.' }, 409);
+    }
+    if (db.users.some(u => (u.email || '').trim().toLowerCase() === trimmedEmail)) {
+      return jsonResponse({ error: 'Email address is already registered.' }, 409);
+    }
+    if (cleanedPhone && db.users.some(u => u.phone && u.phone.replace(/\s+/g, '') === cleanedPhone)) {
+      return jsonResponse({ error: 'Phone number is already registered.' }, 409);
+    }
+
     const hashed = await bcrypt.hash(password, 10);
-    const newUser = { id: nextId('user'), name, email, phone: phone || '', password: hashed, userType: userType || 'User', status: 'Active', createdAt: new Date().toISOString() };
+    const newUser = { id: nextId('user'), name: trimmedName, email: trimmedEmail, phone: phone || '', password: hashed, userType: userType || 'User', status: 'Active', createdAt: new Date().toISOString() };
     db.users.push(newUser);
     await supabaseClient.upsertRecord('users', newUser);
     return jsonResponse({ message: 'Account created successfully.' });
