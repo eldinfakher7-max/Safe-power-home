@@ -9,6 +9,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -58,15 +59,61 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleLogin}>
+          {/* Login Method Tab Selector */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 18, background: 'var(--accent)', padding: 4, borderRadius: 10, border: '1px solid var(--border)' }}>
+            <button
+              type="button"
+              onClick={() => { setLoginMethod('email'); setForm(p => ({ ...p, email: '' })); }}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                border: 'none',
+                transition: 'all 0.2s ease',
+                background: loginMethod === 'email' ? 'var(--card-bg, #ffffff)' : 'transparent',
+                color: loginMethod === 'email' ? 'var(--primary)' : 'var(--text-muted)',
+                boxShadow: loginMethod === 'email' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'
+              }}
+            >
+              <i className="fa-solid fa-envelope" style={{ marginRight: 6 }} />
+              Email Address
+            </button>
+            <button
+              type="button"
+              onClick={() => { setLoginMethod('phone'); setForm(p => ({ ...p, email: '' })); }}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                border: 'none',
+                transition: 'all 0.2s ease',
+                background: loginMethod === 'phone' ? 'var(--card-bg, #ffffff)' : 'transparent',
+                color: loginMethod === 'phone' ? 'var(--primary)' : 'var(--text-muted)',
+                boxShadow: loginMethod === 'phone' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'
+              }}
+            >
+              <i className="fa-solid fa-phone" style={{ marginRight: 6 }} />
+              Phone Number
+            </button>
+          </div>
+
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Email or Phone Number</label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>
+              {loginMethod === 'email' ? 'Email Address' : 'Phone Number'}
+            </label>
             <div style={{ position: 'relative' }}>
-              <i className="fa-solid fa-user" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 14 }} />
+              <i className={`fa-solid ${loginMethod === 'email' ? 'fa-envelope' : 'fa-phone'}`} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 14 }} />
               <input
-                type="text"
+                type={loginMethod === 'email' ? 'email' : 'tel'}
                 className="form-input"
                 style={{ paddingLeft: 38 }}
-                placeholder="Enter email or phone number..."
+                placeholder={loginMethod === 'email' ? 'admin@smartpowerhome.com' : 'e.g. +966500000000'}
                 value={form.email}
                 onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
                 required

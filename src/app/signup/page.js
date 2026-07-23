@@ -17,6 +17,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const ADMIN_SECRET = 'fakherkoky@2010';
 
@@ -100,15 +101,20 @@ export default function SignupPage() {
             <input type="email" className="form-input" placeholder="your@email.com" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} required />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Password</label>
-              <input type="password" className="form-input" placeholder="••••••••" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} required />
+              <input type={showPassword ? 'text' : 'password'} className="form-input" placeholder="••••••••" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} required />
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Confirm Password</label>
-              <input type="password" className="form-input" placeholder="••••••••" value={form.confirmPassword} onChange={e => setForm(p => ({ ...p, confirmPassword: e.target.value }))} required />
+              <input type={showPassword ? 'text' : 'password'} className="form-input" placeholder="••••••••" value={form.confirmPassword} onChange={e => setForm(p => ({ ...p, confirmPassword: e.target.value }))} required />
             </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <input type="checkbox" id="show-pass" checked={showPassword} onChange={e => setShowPassword(e.target.checked)} style={{ cursor: 'pointer' }} />
+            <label htmlFor="show-pass" style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', cursor: 'pointer', userSelect: 'none' }}>Show Passwords</label>
           </div>
 
           <div style={{ marginBottom: 16 }}>
