@@ -265,10 +265,45 @@ export default function DevicesPage() {
     };
   }, []);
 
+  async function autoSeedTwelveDevices() {
+    const twelveList = THIRTY_SMART_DEVICES.slice(0, 12);
+    for (const item of twelveList) {
+      const payload = {
+        name: item.name,
+        type: item.type,
+        location: item.location,
+        imageIcon: item.imageIcon,
+        customImage: item.imageUrl || '',
+        customImageName: item.name,
+        powerRating: item.powerRating,
+        maxWorkingHours: item.maxWorkingHours,
+        maxEnergyConsumption: item.maxEnergyConsumption,
+        targetTemp: item.targetTemp || 24,
+        auth_password: 'fakherkoky@2010'
+      };
+      try {
+        await fetch('/api/devices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(payload)
+        });
+      } catch {}
+    }
+    const res = await fetch('/api/devices', { headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) setDevices(await res.json());
+  }
+
   async function loadDevices() {
     setLoading(true);
     const res = await fetch('/api/devices', { headers: { Authorization: `Bearer ${token}` } });
-    if (res.ok) setDevices(await res.json());
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length === 0) {
+        await autoSeedTwelveDevices();
+      } else {
+        setDevices(data);
+      }
+    }
     setLoading(false);
   }
 
@@ -572,14 +607,9 @@ export default function DevicesPage() {
           <h2 style={{ fontWeight: 800, color: 'var(--primary)', fontSize: 20 }}>Smart Devices</h2>
           <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{devices.length} registered channels · {devices.filter(d => d.state === 1).length} active</p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-secondary" onClick={seedThirtyDevices} style={{ background: 'linear-gradient(135deg, #8B5CF6, #6366F1)', color: '#fff', border: 'none', fontWeight: 700 }}>
-            <i className="fa-solid fa-bolt" /> ⚡ Add 30 Smart Devices
-          </button>
-          <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
-            <i className="fa-solid fa-plus" /> Add Device
-          </button>
-        </div>
+        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
+          <i className="fa-solid fa-plus" /> Add Device
+        </button>
       </div>
 
       {/* Devices Grid */}
