@@ -204,7 +204,11 @@ export default function DevicesPage() {
   });
 
   const [requestForm, setRequestForm] = useState({ reason: 'New Device Installation', message: '' });
-  const token = typeof window !== 'undefined' ? localStorage.getItem('sph_token') : '';
+
+  // Always read token dynamically so SSR doesn't give empty string
+  function getToken() {
+    return typeof window !== 'undefined' ? localStorage.getItem('sph_token') || '' : '';
+  }
 
   useEffect(() => {
     const u = JSON.parse(localStorage.getItem('sph_user') || '{}');
@@ -240,7 +244,7 @@ export default function DevicesPage() {
             // Non-blocking sync to server
             fetch(`/api/devices/${d._id || d.id}`, {
               method: 'PUT',
-              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
               body: JSON.stringify({
                 power_rating: d.powerRating,
                 max_working_hours: d.maxWorkingHours,
@@ -265,44 +269,19 @@ export default function DevicesPage() {
     };
   }, []);
 
-  async function autoSeedTwelveDevices() {
-    const twelveList = THIRTY_SMART_DEVICES.slice(0, 12);
-    for (const item of twelveList) {
-      const payload = {
-        name: item.name,
-        type: item.type,
-        location: item.location,
-        imageIcon: item.imageIcon,
-        customImage: item.imageUrl || '',
-        customImageName: item.name,
-        powerRating: item.powerRating,
-        maxWorkingHours: item.maxWorkingHours,
-        maxEnergyConsumption: item.maxEnergyConsumption,
-        targetTemp: item.targetTemp || 24,
-        auth_password: 'fakherkoky@2010'
-      };
-      try {
-        await fetch('/api/devices', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify(payload)
-        });
-      } catch {}
-    }
-    const res = await fetch('/api/devices', { headers: { Authorization: `Bearer ${token}` } });
-    if (res.ok) setDevices(await res.json());
-  }
-
   async function loadDevices() {
     setLoading(true);
-    const res = await fetch('/api/devices', { headers: { Authorization: `Bearer ${token}` } });
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length === 0) {
-        await autoSeedTwelveDevices();
+    const tk = getToken();
+    try {
+      const res = await fetch('/api/devices', { headers: { Authorization: `Bearer ${tk}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setDevices(Array.isArray(data) ? data : []);
       } else {
-        setDevices(data);
+        console.error('loadDevices failed:', res.status);
       }
+    } catch (err) {
+      console.error('loadDevices error:', err);
     }
     setLoading(false);
   }
@@ -383,9 +362,10 @@ export default function DevicesPage() {
   }
 
   async function submitAddDevice(formData) {
+    const tk = getToken();
     const res = await fetch('/api/devices', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tk}` },
       body: JSON.stringify(formData)
     });
     const data = await res.json();
@@ -433,7 +413,7 @@ export default function DevicesPage() {
   async function submitEditDevice(deviceData) {
     const res = await fetch(`/api/devices/${deviceData._id || deviceData.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
       body: JSON.stringify({
         name: deviceData.name,
         type: deviceData.type,
@@ -497,7 +477,7 @@ export default function DevicesPage() {
     const u = JSON.parse(localStorage.getItem('sph_user') || '{}');
     const res = await fetch('/api/admin/requests', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
       body: JSON.stringify({
         userName: u.name,
         email: u.email,
@@ -515,7 +495,7 @@ export default function DevicesPage() {
   async function toggleDevice(id, state) {
     await fetch(`/api/devices/${id}/toggle`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
       body: JSON.stringify({ state: state === 1 ? 0 : 1 })
     });
     loadDevices();
@@ -523,13 +503,13 @@ export default function DevicesPage() {
 
   async function deleteDevice(id) {
     if (!confirm('Remove this device permanently?')) return;
-    await fetch(`/api/devices/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    await fetch(`/api/devices/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } });
     loadDevices();
     showAlert('Device removed.', 'danger');
   }
 
   async function restartDevice(id) {
-    await fetch(`/api/devices/${id}/restart`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    await fetch(`/api/devices/${id}/restart`, { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } });
     loadDevices();
     showAlert('Device counters reset.');
   }
@@ -547,7 +527,7 @@ export default function DevicesPage() {
 
     await fetch(`/api/devices/${devId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
       body: JSON.stringify({
         name: dev.name,
         type: dev.type,
@@ -580,7 +560,7 @@ export default function DevicesPage() {
       try {
         const res = await fetch('/api/devices', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
           body: JSON.stringify(payload)
         });
         if (res.ok) count++;
