@@ -241,14 +241,20 @@ export default function DevicesPage() {
               monthlyConsumption: (d.monthlyConsumption || 0) + energy
             };
 
-            // Trigger real-time alert toast if threshold exceeded
-            if (updatedDevice.currentWorkingHours >= updatedDevice.maxWorkingHours && !d._hoursAlerted) {
-              updatedDevice._hoursAlerted = true;
-              showAlert(`⏱️ Alert: "${d.name}" exceeded maximum operating limit (${d.maxWorkingHours} hrs)!`, 'danger');
+            // Trigger real-time alert toast & Auto-Shutdown (Turn OFF) if threshold exceeded
+            if (updatedDevice.currentWorkingHours >= updatedDevice.maxWorkingHours) {
+              updatedDevice.state = 0; // Turn OFF device
+              if (!d._hoursAlerted) {
+                updatedDevice._hoursAlerted = true;
+                showAlert(`🔴 Alert: "${d.name}" exceeded operating time limit (${d.maxWorkingHours} hrs) and was automatically turned OFF!`, 'danger');
+              }
             }
-            if (updatedDevice.currentConsumption >= updatedDevice.maxEnergyConsumption && !d._energyAlerted) {
-              updatedDevice._energyAlerted = true;
-              showAlert(`⚡ Alert: "${d.name}" exceeded maximum energy limit (${d.maxEnergyConsumption} kWh)!`, 'danger');
+            if (updatedDevice.currentConsumption >= updatedDevice.maxEnergyConsumption) {
+              updatedDevice.state = 0; // Turn OFF device
+              if (!d._energyAlerted) {
+                updatedDevice._energyAlerted = true;
+                showAlert(`🔴 Alert: "${d.name}" exceeded energy limit (${d.maxEnergyConsumption} kWh) and was automatically turned OFF!`, 'danger');
+              }
             }
 
             // Non-blocking sync to server

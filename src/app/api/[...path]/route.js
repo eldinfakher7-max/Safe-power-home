@@ -387,13 +387,14 @@ export async function PUT(request, { params }) {
     if (currentWorkingHours !== undefined) device.currentWorkingHours = currentWorkingHours;
     if (currentConsumption !== undefined) device.currentConsumption = currentConsumption;
     if (targetTemp !== undefined) device.targetTemp = targetTemp;
-    // Auto-create alert if hours or energy limit is reached
+    // Auto-create alert and TURN OFF device (Auto-Shutdown) if hours or energy limit is reached
     if (device.currentWorkingHours >= device.maxWorkingHours && !device._hoursAlerted) {
       device._hoursAlerted = true;
+      device.state = 0; // Turn OFF device
       const alertObj = {
         id: nextId('alert'),
-        title: '⏱️ Operating Hours Limit Reached',
-        message: `Device "${device.name}" has reached its daily limit of ${device.maxWorkingHours} hours.`,
+        title: '⏱️ Operating Hours Limit Reached (Device OFF)',
+        message: `Device "${device.name}" reached max limit of ${device.maxWorkingHours} hrs and was automatically turned OFF.`,
         severity: 'Warning',
         status: 'Active',
         deviceId: device.id,
@@ -407,7 +408,7 @@ export async function PUT(request, { params }) {
       const notifObj = {
         id: nextId('notif'),
         userId: device.userId,
-        message: `⏱️ "${device.name}" operating hours limit reached!`,
+        message: `🔴 "${device.name}" operating hours limit reached — Device automatically turned OFF!`,
         type: 'Warning',
         status: 'Unread',
         timestamp: new Date().toISOString()
@@ -418,10 +419,11 @@ export async function PUT(request, { params }) {
 
     if (device.currentConsumption >= device.maxEnergyConsumption && !device._energyAlerted) {
       device._energyAlerted = true;
+      device.state = 0; // Turn OFF device
       const alertObj = {
         id: nextId('alert'),
-        title: '⚡ High Energy Limit Exceeded',
-        message: `Device "${device.name}" consumed ${device.currentConsumption.toFixed(2)} kWh, exceeding max limit (${device.maxEnergyConsumption} kWh).`,
+        title: '⚡ High Energy Limit Exceeded (Device OFF)',
+        message: `Device "${device.name}" consumed ${device.currentConsumption.toFixed(2)} kWh (max ${device.maxEnergyConsumption} kWh) and was automatically turned OFF.`,
         severity: 'Danger',
         status: 'Active',
         deviceId: device.id,
@@ -435,7 +437,7 @@ export async function PUT(request, { params }) {
       const notifObj = {
         id: nextId('notif'),
         userId: device.userId,
-        message: `⚡ "${device.name}" energy consumption limit exceeded!`,
+        message: `🔴 "${device.name}" energy limit exceeded — Device automatically turned OFF!`,
         type: 'Danger',
         status: 'Unread',
         timestamp: new Date().toISOString()
