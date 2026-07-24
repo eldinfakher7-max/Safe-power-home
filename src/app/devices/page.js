@@ -578,6 +578,37 @@ export default function DevicesPage() {
     showAlert(`🎉 Successfully registered ${count} Smart Home Devices!`, 'success');
   }
 
+  async function batchAddDevices(count = 10) {
+    setLoading(true);
+    let added = 0;
+    for (let i = 0; i < count; i++) {
+      const item = THIRTY_SMART_DEVICES[(devices.length + i) % THIRTY_SMART_DEVICES.length];
+      const payload = {
+        name: `${item.name} (${devices.length + i + 1})`,
+        type: item.type,
+        location: item.location,
+        imageIcon: item.imageIcon,
+        customImage: item.imageUrl || '',
+        customImageName: item.name,
+        powerRating: item.powerRating,
+        maxWorkingHours: item.maxWorkingHours,
+        maxEnergyConsumption: item.maxEnergyConsumption,
+        targetTemp: item.targetTemp || 24
+      };
+      try {
+        const res = await fetch('/api/devices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) added++;
+      } catch {}
+    }
+    await loadDevices();
+    setLoading(false);
+    showAlert(`🎉 Added ${added} new smart devices to your account!`, 'success');
+  }
+
   return (
     <LayoutWrapper pageTitle="Device Management">
       {/* Alert bar */}
@@ -592,11 +623,16 @@ export default function DevicesPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h2 style={{ fontWeight: 800, color: 'var(--primary)', fontSize: 20 }}>Smart Devices</h2>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{devices.length} registered channels · {devices.filter(d => d.state === 1).length} active</p>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{devices.length} registered channels · {devices.filter(d => d.state === 1).length} active (Unlimited)</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
-          <i className="fa-solid fa-plus" /> Add Device
-        </button>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button className="btn btn-secondary" onClick={() => batchAddDevices(10)} style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)', color: '#FFF', border: 'none' }}>
+            <i className="fa-solid fa-bolt" /> + Add 10 Devices
+          </button>
+          <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
+            <i className="fa-solid fa-plus" /> Add Device
+          </button>
+        </div>
       </div>
 
       {/* Devices Grid */}
@@ -852,15 +888,6 @@ export default function DevicesPage() {
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Max Daily Energy (kWh)</label>
               <input type="number" step="0.1" className="form-input" value={addForm.maxEnergyConsumption} onChange={e => setAddForm(p => ({ ...p, maxEnergyConsumption: +e.target.value }))} required />
-            </div>
-
-            <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '14px' }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--danger)', marginBottom: 6, display: 'block' }}>
-                <i className="fa-solid fa-shield-halved" style={{ marginRight: 6 }} />
-                Device Registration Password *
-              </label>
-              <input type="password" className="form-input" placeholder="Enter registration passcode" value={addForm.auth_password} onChange={e => setAddForm(p => ({ ...p, auth_password: e.target.value }))} required />
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Use <b>fakherkoky@2010</b> to authorize immediately.</div>
             </div>
           </div>
           <div className="modal-footer">

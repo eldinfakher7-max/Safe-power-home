@@ -374,9 +374,8 @@ app.prepare().then(async () => {
 
   // POST /api/devices
   expressApp.post('/api/devices', auth, async (req, res) => {
-    const { name, type, location, imageIcon, customImage, customImageName, powerRating, maxWorkingHours, maxEnergyConsumption, auth_password, autoShutdown } = req.body;
+    const { name, type, location, imageIcon, customImage, customImageName, powerRating, maxWorkingHours, maxEnergyConsumption, autoShutdown } = req.body;
     if (!name || !type || !location) return res.status(400).json({ error: 'Name, type, and location are required.' });
-    if (auth_password !== DEVICE_PASSWORD) return res.status(403).json({ error: 'Incorrect device registration password.' });
 
     const device = {
       id: nextId('device'),

@@ -190,9 +190,8 @@ export async function POST(request, { params }) {
   if (routePath === 'devices') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
     await refreshTable('devices');
-    const { name, type, location, imageIcon, customImage, customImageName, powerRating, maxWorkingHours, maxEnergyConsumption, auth_password, autoShutdown, targetTemp } = body;
+    const { name, type, location, imageIcon, customImage, customImageName, powerRating, maxWorkingHours, maxEnergyConsumption, autoShutdown, targetTemp } = body;
     if (!name || !type || !location) return jsonResponse({ error: 'Name, type, and location are required.' }, 400);
-    if (auth_password !== DEVICE_PASSWORD) return jsonResponse({ error: 'Incorrect device registration password.' }, 403);
 
     const device = {
       id: nextId('device'),
