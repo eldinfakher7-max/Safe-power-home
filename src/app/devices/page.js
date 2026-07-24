@@ -878,8 +878,8 @@ export default function DevicesPage() {
                 <i className="fa-solid fa-shield-halved" style={{ marginRight: 6 }} />
                 Device Registration Password *
               </label>
-              <input type="password" className="form-input" placeholder="Enter registration passcode (fakherkoky@2010)" value={addForm.auth_password} onChange={e => setAddForm(p => ({ ...p, auth_password: e.target.value }))} required />
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Use <b>fakherkoky@2010</b> to authorize immediately, or request Admin access if wrong.</div>
+              <input type="password" className="form-input" placeholder="Enter registration passcode" value={addForm.auth_password} onChange={e => setAddForm(p => ({ ...p, auth_password: e.target.value }))} required />
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Enter passcode to authorize immediately, or submit access request to Admin if wrong.</div>
             </div>
           </div>
           <div className="modal-footer">
