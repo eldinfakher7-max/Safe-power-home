@@ -241,6 +241,16 @@ export default function DevicesPage() {
               monthlyConsumption: (d.monthlyConsumption || 0) + energy
             };
 
+            // Trigger real-time alert toast if threshold exceeded
+            if (updatedDevice.currentWorkingHours >= updatedDevice.maxWorkingHours && !d._hoursAlerted) {
+              updatedDevice._hoursAlerted = true;
+              showAlert(`⏱️ Alert: "${d.name}" exceeded maximum operating limit (${d.maxWorkingHours} hrs)!`, 'danger');
+            }
+            if (updatedDevice.currentConsumption >= updatedDevice.maxEnergyConsumption && !d._energyAlerted) {
+              updatedDevice._energyAlerted = true;
+              showAlert(`⚡ Alert: "${d.name}" exceeded maximum energy limit (${d.maxEnergyConsumption} kWh)!`, 'danger');
+            }
+
             // Non-blocking sync to server
             fetch(`/api/devices/${d._id || d.id}`, {
               method: 'PUT',

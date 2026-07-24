@@ -387,6 +387,63 @@ export async function PUT(request, { params }) {
     if (currentWorkingHours !== undefined) device.currentWorkingHours = currentWorkingHours;
     if (currentConsumption !== undefined) device.currentConsumption = currentConsumption;
     if (targetTemp !== undefined) device.targetTemp = targetTemp;
+    // Auto-create alert if hours or energy limit is reached
+    if (device.currentWorkingHours >= device.maxWorkingHours && !device._hoursAlerted) {
+      device._hoursAlerted = true;
+      const alertObj = {
+        id: nextId('alert'),
+        title: '⏱️ Operating Hours Limit Reached',
+        message: `Device "${device.name}" has reached its daily limit of ${device.maxWorkingHours} hours.`,
+        severity: 'Warning',
+        status: 'Active',
+        deviceId: device.id,
+        deviceName: device.name,
+        userId: device.userId,
+        timestamp: new Date().toISOString()
+      };
+      db.alerts.push(alertObj);
+      await supabaseClient.upsertRecord('alerts', alertObj);
+
+      const notifObj = {
+        id: nextId('notif'),
+        userId: device.userId,
+        message: `⏱️ "${device.name}" operating hours limit reached!`,
+        type: 'Warning',
+        status: 'Unread',
+        timestamp: new Date().toISOString()
+      };
+      db.notifications.push(notifObj);
+      await supabaseClient.upsertRecord('notifications', notifObj);
+    }
+
+    if (device.currentConsumption >= device.maxEnergyConsumption && !device._energyAlerted) {
+      device._energyAlerted = true;
+      const alertObj = {
+        id: nextId('alert'),
+        title: '⚡ High Energy Limit Exceeded',
+        message: `Device "${device.name}" consumed ${device.currentConsumption.toFixed(2)} kWh, exceeding max limit (${device.maxEnergyConsumption} kWh).`,
+        severity: 'Danger',
+        status: 'Active',
+        deviceId: device.id,
+        deviceName: device.name,
+        userId: device.userId,
+        timestamp: new Date().toISOString()
+      };
+      db.alerts.push(alertObj);
+      await supabaseClient.upsertRecord('alerts', alertObj);
+
+      const notifObj = {
+        id: nextId('notif'),
+        userId: device.userId,
+        message: `⚡ "${device.name}" energy consumption limit exceeded!`,
+        type: 'Danger',
+        status: 'Unread',
+        timestamp: new Date().toISOString()
+      };
+      db.notifications.push(notifObj);
+      await supabaseClient.upsertRecord('notifications', notifObj);
+    }
+
     await supabaseClient.upsertRecord('devices', device);
     return jsonResponse(device);
   }
