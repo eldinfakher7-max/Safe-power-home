@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { db, initStore, refreshTable, verifyAuth, nextId, complaintId, JWT_SECRET, DEVICE_PASSWORD } from '@/lib/backendStore';
+import { db, initStore, refreshTable, seedUserTwelveDevices, verifyAuth, nextId, complaintId, JWT_SECRET, DEVICE_PASSWORD } from '@/lib/backendStore';
 import supabaseClient from '@/lib/supabase';
 
 // Helper for JSON response with CORS headers
@@ -31,7 +31,10 @@ export async function GET(request, { params }) {
   if (routePath === 'devices') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
     await refreshTable('devices');
-    const devices = user.userType === 'Admin' ? db.devices : db.devices.filter(d => d.userId === user.id);
+    let devices = user.userType === 'Admin' ? db.devices : db.devices.filter(d => d.userId === user.id);
+    if (devices.length === 0) {
+      devices = await seedUserTwelveDevices(user.id);
+    }
     return jsonResponse(devices);
   }
 

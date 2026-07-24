@@ -174,10 +174,57 @@ function verifyAuth(authHeader) {
   }
 }
 
+const TWELVE_DEFAULT_DEVICES = [
+  { name: 'LG Split AC (Dual Inverter)', type: 'AC', location: 'Living Room', imageIcon: 'fa-wind', customImage: '/preset_ac.jpg', powerRating: 1450, maxWorkingHours: 10, maxEnergyConsumption: 14.5, targetTemp: 22 },
+  { name: 'Samsung Twin Cooling Refrigerator', type: 'Refrigerator', location: 'Kitchen', imageIcon: 'fa-snowflake', customImage: '/preset_fridge.jpg', powerRating: 350, maxWorkingHours: 24, maxEnergyConsumption: 8.4, targetTemp: 3 },
+  { name: 'Ariston Pro1 Eco Water Heater', type: 'Water Heater', location: 'Bathroom', imageIcon: 'fa-faucet-drip', customImage: '/preset_heater.jpg', powerRating: 2000, maxWorkingHours: 4, maxEnergyConsumption: 8.0, targetTemp: 60 },
+  { name: 'Sony Bravia 4K Smart TV', type: 'TV', location: 'Living Room', imageIcon: 'fa-tv', customImage: '/preset_tv.jpg', powerRating: 150, maxWorkingHours: 6, maxEnergyConsumption: 0.9, targetTemp: 24 },
+  { name: 'Tesla Wall Connector EV Charger', type: 'EV Charger', location: 'Garage', imageIcon: 'fa-car-battery', customImage: '/preset_ev.jpg', powerRating: 7400, maxWorkingHours: 5, maxEnergyConsumption: 37.0, targetTemp: 25 },
+  { name: 'Philips Hue Smart LED Bulb', type: 'Lighting', location: 'Bedroom', imageIcon: 'fa-lightbulb', customImage: '/preset_lamp.jpg', powerRating: 9, maxWorkingHours: 12, maxEnergyConsumption: 0.11, targetTemp: 25 },
+  { name: 'Bosch Series 6 Washing Machine', type: 'Washer', location: 'Laundry Room', imageIcon: 'fa-shirt', customImage: 'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=400&auto=format&fit=crop&q=80', powerRating: 2200, maxWorkingHours: 2, maxEnergyConsumption: 4.4, targetTemp: 40 },
+  { name: 'Dell OptiPlex Workstation PC', type: 'Computer', location: 'Home Office', imageIcon: 'fa-desktop', customImage: 'https://images.unsplash.com/photo-1547082299-de196ea013d6?w=400&auto=format&fit=crop&q=80', powerRating: 250, maxWorkingHours: 8, maxEnergyConsumption: 2.0, targetTemp: 35 },
+  { name: 'Panasonic Inverter Microwave', type: 'Appliance', location: 'Kitchen', imageIcon: 'fa-fire-burner', customImage: '', powerRating: 1100, maxWorkingHours: 1, maxEnergyConsumption: 1.1, targetTemp: 180 },
+  { name: 'DeLonghi Espresso Maker', type: 'Appliance', location: 'Kitchen', imageIcon: 'fa-mug-hot', customImage: '', powerRating: 1450, maxWorkingHours: 2, maxEnergyConsumption: 2.9, targetTemp: 92 },
+  { name: 'Dyson Pure Cool Air Purifier', type: 'Appliance', location: 'Bedroom', imageIcon: 'fa-fan', customImage: '', powerRating: 40, maxWorkingHours: 12, maxEnergyConsumption: 0.48, targetTemp: 21 },
+  { name: 'iRobot Roomba Robot Vacuum', type: 'Appliance', location: 'Living Room', imageIcon: 'fa-broom', customImage: '', powerRating: 35, maxWorkingHours: 3, maxEnergyConsumption: 0.1, targetTemp: 25 }
+];
+
+async function seedUserTwelveDevices(userId) {
+  const created = [];
+  for (const item of TWELVE_DEFAULT_DEVICES) {
+    const dev = {
+      id: nextId('device'),
+      userId,
+      name: item.name,
+      type: item.type,
+      location: item.location,
+      imageIcon: item.imageIcon,
+      customImage: item.customImage || '',
+      customImageName: item.name,
+      powerRating: item.powerRating,
+      maxWorkingHours: item.maxWorkingHours,
+      maxEnergyConsumption: item.maxEnergyConsumption,
+      autoShutdown: false,
+      targetTemp: item.targetTemp || 24,
+      state: 0,
+      currentWorkingHours: 0,
+      currentConsumption: 0,
+      todayConsumption: 0,
+      monthlyConsumption: 0,
+      createdAt: new Date().toISOString()
+    };
+    db.devices.push(dev);
+    await supabaseClient.upsertRecord('devices', dev);
+    created.push(dev);
+  }
+  return created;
+}
+
 module.exports = {
   db,
   initStore,
   refreshTable,
+  seedUserTwelveDevices,
   verifyAuth,
   nextId,
   complaintId,

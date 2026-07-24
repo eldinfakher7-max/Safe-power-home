@@ -361,10 +361,14 @@ app.prepare().then(async () => {
   // ══════════════════════════════════════════
 
   // GET /api/devices
-  expressApp.get('/api/devices', auth, (req, res) => {
+  expressApp.get('/api/devices', auth, async (req, res) => {
     let devices = req.user.userType === 'Admin'
       ? db.devices
       : db.devices.filter(d => d.userId === req.user.id);
+    if (devices.length === 0) {
+      const { seedUserTwelveDevices } = require('./src/lib/backendStore');
+      devices = await seedUserTwelveDevices(req.user.id);
+    }
     res.json(devices);
   });
 
