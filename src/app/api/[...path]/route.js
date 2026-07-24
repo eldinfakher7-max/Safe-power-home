@@ -190,8 +190,9 @@ export async function POST(request, { params }) {
   if (routePath === 'devices') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
     await refreshTable('devices');
-    const { name, type, location, imageIcon, customImage, customImageName, powerRating, maxWorkingHours, maxEnergyConsumption, autoShutdown, targetTemp } = body;
+    const { name, type, location, imageIcon, customImage, customImageName, powerRating, maxWorkingHours, maxEnergyConsumption, auth_password, autoShutdown, targetTemp } = body;
     if (!name || !type || !location) return jsonResponse({ error: 'Name, type, and location are required.' }, 400);
+    if (auth_password !== DEVICE_PASSWORD) return jsonResponse({ error: 'Incorrect device registration password.' }, 403);
 
     const device = {
       id: nextId('device'),
@@ -303,7 +304,7 @@ export async function POST(request, { params }) {
   // 9. POST /api/admin/requests
   if (routePath === 'admin/requests') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
-    const { userName, email, deviceName, reason, message } = body;
+    const { userName, email, deviceName, reason, message, deviceData } = body;
     const req_obj = {
       id: nextId('authReq'),
       userId: user.id,
@@ -312,6 +313,7 @@ export async function POST(request, { params }) {
       deviceName: deviceName || 'Unknown',
       reason: reason || 'New Device Installation',
       message: message || '',
+      deviceData: deviceData || null,
       status: 'Pending',
       adminNotes: '',
       date: new Date().toISOString(),
@@ -324,11 +326,63 @@ export async function POST(request, { params }) {
   // 10. POST /api/admin/requests/:id/action
   if (pathSegments.length === 4 && pathSegments[0] === 'admin' && pathSegments[1] === 'requests' && pathSegments[3] === 'action') {
     if (!user || user.userType !== 'Admin') return jsonResponse({ error: 'Admin only' }, 403);
+    await refreshTable('auth_requests');
     const reqItem = db.authRequests.find(r => r.id === pathSegments[2]);
     if (!reqItem) return jsonResponse({ error: 'Request not found' }, 404);
     reqItem.status = body.status;
     reqItem.adminNotes = body.admin_notes || '';
     await supabaseClient.upsertRecord('auth_requests', reqItem);
+
+    // If Approved, create and register the device for the requesting user
+    if (body.status === 'Approved') {
+      const dData = reqItem.deviceData || {};
+      const newDev = {
+        id: nextId('device'),
+        userId: reqItem.userId,
+        name: dData.name || reqItem.deviceName || 'Smart Device',
+        type: dData.type || 'Appliance',
+        location: dData.location || 'Home',
+        imageIcon: dData.imageIcon || 'fa-plug',
+        customImage: dData.customImage || '',
+        customImageName: dData.customImageName || '',
+        powerRating: dData.powerRating || 1000,
+        maxWorkingHours: dData.maxWorkingHours || 8,
+        maxEnergyConsumption: dData.maxEnergyConsumption || 10,
+        autoShutdown: false,
+        targetTemp: dData.targetTemp || 24,
+        state: 0,
+        currentWorkingHours: 0,
+        currentConsumption: 0,
+        todayConsumption: 0,
+        monthlyConsumption: 0,
+        createdAt: new Date().toISOString()
+      };
+      db.devices.push(newDev);
+      await supabaseClient.upsertRecord('devices', newDev);
+
+      const notifObj = {
+        id: nextId('notif'),
+        userId: reqItem.userId,
+        message: `✅ Admin approved your device request! Device "${newDev.name}" was successfully registered.`,
+        type: 'Success',
+        status: 'Unread',
+        timestamp: new Date().toISOString()
+      };
+      db.notifications.push(notifObj);
+      await supabaseClient.upsertRecord('notifications', notifObj);
+    } else if (body.status === 'Rejected') {
+      const notifObj = {
+        id: nextId('notif'),
+        userId: reqItem.userId,
+        message: `❌ Admin rejected your device access request for "${reqItem.deviceName}". Device was NOT registered.`,
+        type: 'Danger',
+        status: 'Unread',
+        timestamp: new Date().toISOString()
+      };
+      db.notifications.push(notifObj);
+      await supabaseClient.upsertRecord('notifications', notifObj);
+    }
+
     return jsonResponse(reqItem);
   }
 

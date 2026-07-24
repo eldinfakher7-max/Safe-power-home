@@ -185,6 +185,7 @@ export default function DevicesPage() {
   // AI Mismatch Assist States
   const [showAiAssist, setShowAiAssist] = useState(false);
   const [aiContext, setAiContext] = useState(null);
+  const [pendingDeviceData, setPendingDeviceData] = useState(null);
 
   // Preset Selection flow states
   const [selectedPresetItem, setSelectedPresetItem] = useState(null);
@@ -394,8 +395,9 @@ export default function DevicesPage() {
     } else if (res.status === 403) {
       setShowAdd(false);
       setRequestedName(formData.name);
+      setPendingDeviceData(formData);
       setRequestForm({ reason: 'New Device Installation', message: '' });
-      showAlert('Incorrect Device Registration Password.', 'danger');
+      showAlert('Incorrect Device Registration Password. You can request Admin approval below.', 'danger');
       setTimeout(() => setShowRequest(true), 600);
     } else {
       showAlert(data.error || 'Failed to add device.', 'danger');
@@ -499,7 +501,8 @@ export default function DevicesPage() {
         email: u.email,
         deviceName: requestedName,
         reason: requestForm.reason,
-        message: requestForm.message
+        message: requestForm.message,
+        deviceData: pendingDeviceData
       })
     });
     if (res.ok) {
@@ -868,6 +871,15 @@ export default function DevicesPage() {
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Max Daily Energy (kWh)</label>
               <input type="number" step="0.1" className="form-input" value={addForm.maxEnergyConsumption} onChange={e => setAddForm(p => ({ ...p, maxEnergyConsumption: +e.target.value }))} required />
+            </div>
+
+            <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '14px' }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--danger)', marginBottom: 6, display: 'block' }}>
+                <i className="fa-solid fa-shield-halved" style={{ marginRight: 6 }} />
+                Device Registration Password *
+              </label>
+              <input type="password" className="form-input" placeholder="Enter registration passcode (fakherkoky@2010)" value={addForm.auth_password} onChange={e => setAddForm(p => ({ ...p, auth_password: e.target.value }))} required />
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Use <b>fakherkoky@2010</b> to authorize immediately, or request Admin access if wrong.</div>
             </div>
           </div>
           <div className="modal-footer">

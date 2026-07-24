@@ -374,8 +374,9 @@ app.prepare().then(async () => {
 
   // POST /api/devices
   expressApp.post('/api/devices', auth, async (req, res) => {
-    const { name, type, location, imageIcon, customImage, customImageName, powerRating, maxWorkingHours, maxEnergyConsumption, autoShutdown } = req.body;
+    const { name, type, location, imageIcon, customImage, customImageName, powerRating, maxWorkingHours, maxEnergyConsumption, auth_password, autoShutdown, targetTemp } = req.body;
     if (!name || !type || !location) return res.status(400).json({ error: 'Name, type, and location are required.' });
+    if (auth_password !== DEVICE_PASSWORD) return res.status(403).json({ error: 'Incorrect device registration password.' });
 
     const device = {
       id: nextId('device'),
@@ -388,6 +389,7 @@ app.prepare().then(async () => {
       powerRating: powerRating || 1000,
       maxWorkingHours: maxWorkingHours || 8,
       maxEnergyConsumption: maxEnergyConsumption || 10,
+      targetTemp: targetTemp || 24,
       autoShutdown: autoShutdown || false,
       state: 0,
       currentWorkingHours: 0,
@@ -635,7 +637,7 @@ app.prepare().then(async () => {
 
   // POST /api/admin/requests
   expressApp.post('/api/admin/requests', auth, async (req, res) => {
-    const { userName, email, deviceName, reason, message } = req.body;
+    const { userName, email, deviceName, reason, message, deviceData } = req.body;
     const req_obj = {
       id: nextId('authReq'),
       userId: req.user.id,
@@ -644,6 +646,7 @@ app.prepare().then(async () => {
       deviceName: deviceName || 'Unknown',
       reason: reason || 'New Device Installation',
       message: message || '',
+      deviceData: deviceData || null,
       status: 'Pending',
       adminNotes: '',
       date: new Date(),
@@ -671,10 +674,40 @@ app.prepare().then(async () => {
     r.actionDate = new Date();
     
     await supabaseClient.upsertRecord('auth_requests', r);
+
+    // If Approved, create device for the user
+    if (status === 'Approved') {
+      const dData = r.deviceData || {};
+      const newDev = {
+        id: nextId('device'),
+        userId: r.userId,
+        name: dData.name || r.deviceName || 'Smart Device',
+        type: dData.type || 'Appliance',
+        location: dData.location || 'Home',
+        imageIcon: dData.imageIcon || 'fa-plug',
+        customImage: dData.customImage || '',
+        customImageName: dData.customImageName || '',
+        powerRating: dData.powerRating || 1000,
+        maxWorkingHours: dData.maxWorkingHours || 8,
+        maxEnergyConsumption: dData.maxEnergyConsumption || 10,
+        autoShutdown: false,
+        targetTemp: dData.targetTemp || 24,
+        state: 0,
+        currentWorkingHours: 0,
+        currentConsumption: 0,
+        todayConsumption: 0,
+        monthlyConsumption: 0,
+        createdAt: new Date().toISOString()
+      };
+      db.devices.push(newDev);
+      await supabaseClient.upsertRecord('devices', newDev);
+      io.emit('device_metrics_updated');
+    }
+
     await addNotification(r.userId,
       status === 'Approved'
-        ? `✅ Your device request for "${r.deviceName}" was approved! You can now register it.`
-        : `❌ Your device request for "${r.deviceName}" was rejected. Reason: ${admin_notes || 'Not specified.'}`,
+        ? `✅ Admin approved your device access request! Device "${r.deviceName}" was successfully registered.`
+        : `❌ Admin rejected your device access request for "${r.deviceName}". Device was NOT registered.`,
       status === 'Approved' ? 'Info' : 'Warning'
     );
     io.emit('request_action', { requestId: r.id, status });

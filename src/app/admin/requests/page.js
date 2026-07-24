@@ -7,13 +7,15 @@ export default function AdminRequestsPage() {
   const [filter, setFilter] = useState('Pending');
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState({});
-  const token = typeof window !== 'undefined' ? localStorage.getItem('sph_token') : '';
+  function getToken() {
+    return typeof window !== 'undefined' ? localStorage.getItem('sph_token') || '' : '';
+  }
 
   useEffect(() => { loadRequests(); }, []);
 
   async function loadRequests() {
     setLoading(true);
-    const res = await fetch('/api/admin/requests', { headers: { Authorization: `Bearer ${token}` } });
+    const res = await fetch('/api/admin/requests', { headers: { Authorization: `Bearer ${getToken()}` } });
     if (res.ok) setRequests(await res.json());
     setLoading(false);
   }
@@ -22,7 +24,7 @@ export default function AdminRequestsPage() {
     const admin_notes = notes[id] || `${status} by administrator.`;
     await fetch(`/api/admin/requests/${id}/action`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
       body: JSON.stringify({ status, admin_notes })
     });
     loadRequests();
