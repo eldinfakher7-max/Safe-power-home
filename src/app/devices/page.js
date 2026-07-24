@@ -32,6 +32,39 @@ const APPLIANCE_MAPPINGS = [
   { keywords: ['microwave', 'oven', 'stove', 'cooker'], label: 'Microwave / Oven', icon: 'fa-fire-burner' },
 ];
 
+const THIRTY_SMART_DEVICES = [
+  { name: 'LG Split AC (Dual Inverter)', type: 'AC', location: 'Living Room', imageIcon: 'fa-wind', imageUrl: '/preset_ac.jpg', powerRating: 1450, maxWorkingHours: 10, maxEnergyConsumption: 14.5, targetTemp: 22 },
+  { name: 'Samsung Twin Cooling Refrigerator', type: 'Refrigerator', location: 'Kitchen', imageIcon: 'fa-snowflake', imageUrl: '/preset_fridge.jpg', powerRating: 350, maxWorkingHours: 24, maxEnergyConsumption: 8.4, targetTemp: 3 },
+  { name: 'Ariston Pro1 Eco Water Heater', type: 'Water Heater', location: 'Bathroom', imageIcon: 'fa-faucet-drip', imageUrl: '/preset_heater.jpg', powerRating: 2000, maxWorkingHours: 4, maxEnergyConsumption: 8.0, targetTemp: 60 },
+  { name: 'Sony Bravia 4K Smart TV', type: 'TV', location: 'Living Room', imageIcon: 'fa-tv', imageUrl: '/preset_tv.jpg', powerRating: 150, maxWorkingHours: 6, maxEnergyConsumption: 0.9, targetTemp: 24 },
+  { name: 'Tesla Wall Connector EV Charger', type: 'EV Charger', location: 'Garage', imageIcon: 'fa-car-battery', imageUrl: '/preset_ev.jpg', powerRating: 7400, maxWorkingHours: 5, maxEnergyConsumption: 37.0, targetTemp: 25 },
+  { name: 'Philips Hue Smart LED Bulb', type: 'Lighting', location: 'Bedroom', imageIcon: 'fa-lightbulb', imageUrl: '/preset_lamp.jpg', powerRating: 9, maxWorkingHours: 12, maxEnergyConsumption: 0.11, targetTemp: 25 },
+  { name: 'Bosch Series 6 Washing Machine', type: 'Washer', location: 'Laundry Room', imageIcon: 'fa-shirt', imageUrl: 'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=400&auto=format&fit=crop&q=80', powerRating: 2200, maxWorkingHours: 2, maxEnergyConsumption: 4.4, targetTemp: 40 },
+  { name: 'Dell OptiPlex Workstation PC', type: 'Computer', location: 'Home Office', imageIcon: 'fa-desktop', imageUrl: 'https://images.unsplash.com/photo-1547082299-de196ea013d6?w=400&auto=format&fit=crop&q=80', powerRating: 250, maxWorkingHours: 8, maxEnergyConsumption: 2.0, targetTemp: 35 },
+  { name: 'Panasonic Inverter Microwave', type: 'Appliance', location: 'Kitchen', imageIcon: 'fa-fire-burner', powerRating: 1100, maxWorkingHours: 1, maxEnergyConsumption: 1.1, targetTemp: 180 },
+  { name: 'DeLonghi Magnifica Espresso Maker', type: 'Appliance', location: 'Kitchen', imageIcon: 'fa-mug-hot', powerRating: 1450, maxWorkingHours: 2, maxEnergyConsumption: 2.9, targetTemp: 92 },
+  { name: 'Dyson Pure Cool Air Purifier', type: 'Appliance', location: 'Bedroom', imageIcon: 'fa-fan', powerRating: 40, maxWorkingHours: 12, maxEnergyConsumption: 0.48, targetTemp: 21 },
+  { name: 'iRobot Roomba Robot Vacuum', type: 'Appliance', location: 'Living Room', imageIcon: 'fa-broom', powerRating: 35, maxWorkingHours: 3, maxEnergyConsumption: 0.1, targetTemp: 25 },
+  { name: 'Sony PlayStation 5 Console', type: 'Appliance', location: 'Gaming Room', imageIcon: 'fa-gamepad', powerRating: 200, maxWorkingHours: 5, maxEnergyConsumption: 1.0, targetTemp: 45 },
+  { name: 'Sonos Arc Dolby Soundbar', type: 'Appliance', location: 'Living Room', imageIcon: 'fa-volume-high', powerRating: 60, maxWorkingHours: 8, maxEnergyConsumption: 0.48, targetTemp: 25 },
+  { name: 'Miele G7000 Smart Dishwasher', type: 'Appliance', location: 'Kitchen', imageIcon: 'fa-sink', powerRating: 1800, maxWorkingHours: 2, maxEnergyConsumption: 3.6, targetTemp: 55 },
+  { name: 'Daikin Bedroom Inverter AC', type: 'AC', location: 'Bedroom', imageIcon: 'fa-wind', imageUrl: '/preset_ac.jpg', powerRating: 1200, maxWorkingHours: 8, maxEnergyConsumption: 9.6, targetTemp: 24 },
+  { name: 'LG Instaview Double Door Refrigerator', type: 'Refrigerator', location: 'Kitchen', imageIcon: 'fa-snowflake', imageUrl: '/preset_fridge.jpg', powerRating: 400, maxWorkingHours: 24, maxEnergyConsumption: 9.6, targetTemp: 2 },
+  { name: 'Siemens Heat Pump Clothes Dryer', type: 'Washer', location: 'Laundry Room', imageIcon: 'fa-shirt', powerRating: 900, maxWorkingHours: 3, maxEnergyConsumption: 2.7, targetTemp: 50 },
+  { name: 'Apple iMac M3 Workstation', type: 'Computer', location: 'Studio', imageIcon: 'fa-desktop', powerRating: 140, maxWorkingHours: 10, maxEnergyConsumption: 1.4, targetTemp: 32 },
+  { name: 'Breville Smart Toaster Oven', type: 'Appliance', location: 'Kitchen', imageIcon: 'fa-fire-burner', powerRating: 1800, maxWorkingHours: 1, maxEnergyConsumption: 1.8, targetTemp: 200 },
+  { name: 'Nest Thermostat Smart Controller', type: 'Appliance', location: 'Hallway', imageIcon: 'fa-temperature-quarter', powerRating: 5, maxWorkingHours: 24, maxEnergyConsumption: 0.12, targetTemp: 23 },
+  { name: 'Aquarium Submersible Water Heater', type: 'Water Heater', location: 'Living Room', imageIcon: 'fa-water', powerRating: 100, maxWorkingHours: 24, maxEnergyConsumption: 2.4, targetTemp: 26 },
+  { name: 'Smart Garage Door Opener Motor', type: 'Appliance', location: 'Garage', imageIcon: 'fa-warehouse', powerRating: 500, maxWorkingHours: 1, maxEnergyConsumption: 0.5, targetTemp: 25 },
+  { name: 'Lawn Smart Irrigation Controller Pump', type: 'Appliance', location: 'Garden', imageIcon: 'fa-faucet', powerRating: 750, maxWorkingHours: 2, maxEnergyConsumption: 1.5, targetTemp: 20 },
+  { name: 'Krups Electric Water Kettle', type: 'Appliance', location: 'Kitchen', imageIcon: 'fa-mug-saucer', powerRating: 2200, maxWorkingHours: 1, maxEnergyConsumption: 2.2, targetTemp: 100 },
+  { name: 'Wine Storage Climate Refrigerator', type: 'Refrigerator', location: 'Dining Room', imageIcon: 'fa-wine-glass', powerRating: 120, maxWorkingHours: 24, maxEnergyConsumption: 2.88, targetTemp: 12 },
+  { name: 'Honeywell Smart Space Heater', type: 'Water Heater', location: 'Study Room', imageIcon: 'fa-fire', powerRating: 1500, maxWorkingHours: 6, maxEnergyConsumption: 9.0, targetTemp: 28 },
+  { name: 'Smart Swimming Pool Filtration Pump', type: 'Appliance', location: 'Outdoor Pool', imageIcon: 'fa-life-ring', powerRating: 1100, maxWorkingHours: 8, maxEnergyConsumption: 8.8, targetTemp: 27 },
+  { name: 'Yeelight Smart Ceiling Light', type: 'Lighting', location: 'Hallway', imageIcon: 'fa-lightbulb', imageUrl: '/preset_lamp.jpg', powerRating: 28, maxWorkingHours: 10, maxEnergyConsumption: 0.28, targetTemp: 25 },
+  { name: 'Smart Dehumidifier Unit', type: 'Appliance', location: 'Basement', imageIcon: 'fa-droplet-slash', powerRating: 420, maxWorkingHours: 8, maxEnergyConsumption: 3.36, targetTemp: 20 },
+];
+
 const PRESET_LIBRARY_DEVICES = [
   {
     name: 'Samsung Twin Cooling Refrigerator',
@@ -466,6 +499,63 @@ export default function DevicesPage() {
     showAlert('Device counters reset.');
   }
 
+  async function updateDeviceMetric(id, updates) {
+    const dev = devices.find(d => (d._id || d.id) === id);
+    if (!dev) return;
+    const devId = dev._id || dev.id;
+
+    const newPower = updates.powerRating !== undefined ? updates.powerRating : dev.powerRating;
+    const newHours = updates.maxWorkingHours !== undefined ? updates.maxWorkingHours : dev.maxWorkingHours;
+    const newTemp = updates.targetTemp !== undefined ? updates.targetTemp : (dev.targetTemp || 24);
+
+    setDevices(prev => prev.map(d => ((d._id || d.id) === devId ? { ...d, powerRating: newPower, maxWorkingHours: newHours, targetTemp: newTemp } : d)));
+
+    await fetch(`/api/devices/${devId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        name: dev.name,
+        type: dev.type,
+        location: dev.location,
+        power_rating: newPower,
+        max_working_hours: newHours,
+        targetTemp: newTemp
+      })
+    });
+  }
+
+  async function seedThirtyDevices() {
+    if (!confirm('Add 30 smart home devices to your account?')) return;
+    setLoading(true);
+    let count = 0;
+    for (const item of THIRTY_SMART_DEVICES) {
+      const payload = {
+        name: item.name,
+        type: item.type,
+        location: item.location,
+        imageIcon: item.imageIcon,
+        customImage: item.imageUrl || '',
+        customImageName: item.name,
+        powerRating: item.powerRating,
+        maxWorkingHours: item.maxWorkingHours,
+        maxEnergyConsumption: item.maxEnergyConsumption,
+        targetTemp: item.targetTemp || 24,
+        auth_password: 'fakherkoky@2010'
+      };
+      try {
+        const res = await fetch('/api/devices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) count++;
+      } catch {}
+    }
+    await loadDevices();
+    setLoading(false);
+    showAlert(`🎉 Successfully registered ${count} Smart Home Devices!`, 'success');
+  }
+
   return (
     <LayoutWrapper pageTitle="Device Management">
       {/* Alert bar */}
@@ -477,14 +567,19 @@ export default function DevicesPage() {
       )}
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h2 style={{ fontWeight: 800, color: 'var(--primary)', fontSize: 20 }}>Smart Devices</h2>
           <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{devices.length} registered channels · {devices.filter(d => d.state === 1).length} active</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
-          <i className="fa-solid fa-plus" /> Add Device
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn-secondary" onClick={seedThirtyDevices} style={{ background: 'linear-gradient(135deg, #8B5CF6, #6366F1)', color: '#fff', border: 'none', fontWeight: 700 }}>
+            <i className="fa-solid fa-bolt" /> ⚡ Add 30 Smart Devices
+          </button>
+          <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
+            <i className="fa-solid fa-plus" /> Add Device
+          </button>
+        </div>
       </div>
 
       {/* Devices Grid */}
@@ -543,6 +638,51 @@ export default function DevicesPage() {
                   </span>
                   <span className="pill pill-info">{d.powerRating}W</span>
                   <span className="pill" style={{ background: 'rgba(139,92,246,0.1)', color: '#7C3AED' }}>{d.type}</span>
+                  <span className="pill" style={{ background: 'rgba(239,68,68,0.1)', color: '#EF4444' }}>
+                    <i className="fa-solid fa-temperature-half" style={{ fontSize: 10, marginRight: 4 }} />
+                    {d.targetTemp || 24}°C
+                  </span>
+                </div>
+
+                {/* Quick Interactive Control Bar: Time, Watts & Temperature */}
+                <div style={{ background: 'rgba(243, 244, 246, 0.7)', borderRadius: 10, padding: '10px 12px', marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 8, border: '1px solid rgba(0,0,0,0.05)' }}>
+                  
+                  {/* Power Rating / Watts Control */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
+                    <span style={{ fontWeight: 600, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <i className="fa-solid fa-bolt" style={{ color: '#F59E0B' }} /> Watts:
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button onClick={() => updateDeviceMetric(d._id || d.id, { powerRating: Math.max(10, d.powerRating - 50) })} style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: '#E5E7EB', color: '#1F2937', cursor: 'pointer', fontWeight: 700 }}>-</button>
+                      <span style={{ fontWeight: 700, color: '#1F2937', minWidth: 50, textAlign: 'center' }}>{d.powerRating}W</span>
+                      <button onClick={() => updateDeviceMetric(d._id || d.id, { powerRating: d.powerRating + 50 })} style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: '#E5E7EB', color: '#1F2937', cursor: 'pointer', fontWeight: 700 }}>+</button>
+                    </div>
+                  </div>
+
+                  {/* Max Working Hours Control */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
+                    <span style={{ fontWeight: 600, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <i className="fa-regular fa-clock" style={{ color: '#3B82F6' }} /> Max Time:
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button onClick={() => updateDeviceMetric(d._id || d.id, { maxWorkingHours: Math.max(1, d.maxWorkingHours - 1) })} style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: '#E5E7EB', color: '#1F2937', cursor: 'pointer', fontWeight: 700 }}>-</button>
+                      <span style={{ fontWeight: 700, color: '#1F2937', minWidth: 50, textAlign: 'center' }}>{d.maxWorkingHours} hrs</span>
+                      <button onClick={() => updateDeviceMetric(d._id || d.id, { maxWorkingHours: d.maxWorkingHours + 1 })} style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: '#E5E7EB', color: '#1F2937', cursor: 'pointer', fontWeight: 700 }}>+</button>
+                    </div>
+                  </div>
+
+                  {/* Temperature Control (°C) */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
+                    <span style={{ fontWeight: 600, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <i className="fa-solid fa-temperature-half" style={{ color: '#EF4444' }} /> Temp:
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button onClick={() => updateDeviceMetric(d._id || d.id, { targetTemp: Math.max(10, (d.targetTemp || 24) - 1) })} style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: '#E5E7EB', color: '#1F2937', cursor: 'pointer', fontWeight: 700 }}>-</button>
+                      <span style={{ fontWeight: 700, color: '#1F2937', minWidth: 50, textAlign: 'center' }}>{d.targetTemp || 24}°C</span>
+                      <button onClick={() => updateDeviceMetric(d._id || d.id, { targetTemp: Math.min(90, (d.targetTemp || 24) + 1) })} style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: '#E5E7EB', color: '#1F2937', cursor: 'pointer', fontWeight: 700 }}>+</button>
+                    </div>
+                  </div>
+
                 </div>
 
                 {/* Progress Bars */}

@@ -187,7 +187,7 @@ export async function POST(request, { params }) {
   if (routePath === 'devices') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
     await refreshTable('devices');
-    const { name, type, location, imageIcon, customImage, customImageName, powerRating, maxWorkingHours, maxEnergyConsumption, auth_password, autoShutdown } = body;
+    const { name, type, location, imageIcon, customImage, customImageName, powerRating, maxWorkingHours, maxEnergyConsumption, auth_password, autoShutdown, targetTemp } = body;
     if (!name || !type || !location) return jsonResponse({ error: 'Name, type, and location are required.' }, 400);
     if (auth_password !== DEVICE_PASSWORD) return jsonResponse({ error: 'Incorrect device registration password.' }, 403);
 
@@ -202,6 +202,7 @@ export async function POST(request, { params }) {
       maxWorkingHours: maxWorkingHours || 8,
       maxEnergyConsumption: maxEnergyConsumption || 10,
       autoShutdown: autoShutdown || false,
+      targetTemp: targetTemp || 24,
       state: 0,
       currentWorkingHours: 0,
       currentConsumption: 0,
@@ -368,7 +369,7 @@ export async function PUT(request, { params }) {
     await refreshTable('devices');
     const device = db.devices.find(d => d.id === pathSegments[1] && (user.userType === 'Admin' || d.userId === user.id));
     if (!device) return jsonResponse({ error: 'Device not found' }, 404);
-    const { name, type, location, power_rating, max_working_hours, max_energy_consumption, imageIcon, customImage, customImageName, autoShutdown, currentWorkingHours, currentConsumption } = body;
+    const { name, type, location, power_rating, max_working_hours, max_energy_consumption, imageIcon, customImage, customImageName, autoShutdown, currentWorkingHours, currentConsumption, targetTemp } = body;
     if (name) device.name = name;
     if (type) device.type = type;
     if (location) device.location = location;
@@ -381,6 +382,7 @@ export async function PUT(request, { params }) {
     if (autoShutdown !== undefined) device.autoShutdown = autoShutdown;
     if (currentWorkingHours !== undefined) device.currentWorkingHours = currentWorkingHours;
     if (currentConsumption !== undefined) device.currentConsumption = currentConsumption;
+    if (targetTemp !== undefined) device.targetTemp = targetTemp;
     await supabaseClient.upsertRecord('devices', device);
     return jsonResponse(device);
   }
