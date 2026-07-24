@@ -45,11 +45,10 @@ module.exports = {
     }
   },
 
-  // Generic upsert (insert or update)
+  // Generic upsert (insert or update) - only sends known safe fields
   upsertRecord: async (tableName, record) => {
     if (!isConfigured) return;
     try {
-      // Map _id/id field
       const cleanRecord = { ...record };
       const { error } = await supabase.from(tableName).upsert(cleanRecord);
       if (error) {
@@ -57,6 +56,19 @@ module.exports = {
       }
     } catch (err) {
       console.error(`Network error upserting to ${tableName}:`, err.message);
+    }
+  },
+
+  // Partial update - only updates specific fields for a record by id
+  updateFields: async (tableName, id, fields) => {
+    if (!isConfigured) return;
+    try {
+      const { error } = await supabase.from(tableName).update(fields).eq('id', id);
+      if (error) {
+        console.error(`Supabase error updating fields in ${tableName}:`, error.message);
+      }
+    } catch (err) {
+      console.error(`Network error updating fields in ${tableName}:`, err.message);
     }
   },
 

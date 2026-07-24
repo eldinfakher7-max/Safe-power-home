@@ -493,12 +493,19 @@ export default function DevicesPage() {
   }
 
   async function toggleDevice(id, state) {
-    await fetch(`/api/devices/${id}/toggle`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-      body: JSON.stringify({ state: state === 1 ? 0 : 1 })
-    });
-    loadDevices();
+    const nextState = state === 1 ? 0 : 1;
+    // Optimistic update so switch turns ON/OFF instantly
+    setDevices(prev => prev.map(d => ((d._id || d.id) === id ? { ...d, state: nextState } : d)));
+
+    try {
+      await fetch(`/api/devices/${id}/toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ state: nextState })
+      });
+    } catch (err) {
+      console.error('Toggle error:', err);
+    }
   }
 
   async function deleteDevice(id) {

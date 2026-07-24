@@ -222,12 +222,14 @@ export async function POST(request, { params }) {
   if (pathSegments.length === 3 && pathSegments[0] === 'devices' && pathSegments[2] === 'toggle') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
     await refreshTable('devices');
-    const device = db.devices.find(d => d.id === pathSegments[1] && (user.userType === 'Admin' || d.userId === user.id));
+    const deviceId = pathSegments[1];
+    const device = db.devices.find(d => (d.id === deviceId) && (user.userType === 'Admin' || d.userId === user.id));
     if (!device) return jsonResponse({ error: 'Device not found.' }, 404);
     const newState = body.state !== undefined ? body.state : (device.state === 1 ? 0 : 1);
     device.state = newState;
-    await supabaseClient.upsertRecord('devices', device);
-    return jsonResponse(device);
+    // Only update the 'state' field in Supabase (safe partial update)
+    await supabaseClient.updateFields('devices', deviceId, { state: newState });
+    return jsonResponse({ id: deviceId, state: newState });
   }
 
   // 5. POST /api/devices/:id/restart
