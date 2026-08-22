@@ -104,13 +104,152 @@ export default function AIChatPage() {
   }
 
   function generateAIResponse(query, devList, alertList) {
-    const q = query.toLowerCase();
+    const q = query.toLowerCase().trim();
     const activeCount = devList.filter(d => d.state === 1).length;
     const totalWatts = devList.reduce((sum, d) => sum + (d.state === 1 ? (d.powerRating || 1000) : 0), 0);
     const totalKwh = devList.reduce((sum, d) => sum + (d.currentConsumption || 0), 0);
     const topConsumer = [...devList].sort((a, b) => (b.currentConsumption || 0) - (a.currentConsumption || 0))[0];
 
-    if (q.includes('analyze my energy') || q.includes('consumption')) {
+    // 1. C++ / C / CPP Code Requests
+    if (q.includes('c++') || q.includes('cpp') || q.includes('cplusplus') || (q.includes('كود') && (q.includes('c') || q.includes('سي')))) {
+      return `أهلاً بك! بالتأكيد، إليك كود **C++** احترافي وشامل لمراقبة استهلاك الطاقة وحماية الأجهزة من الأحمال الزائدة (Overload Protection) متوافق مع الحساسات وأنظمة الإمبيدد (ESP32 / Arduino / C++ Systems):
+
+\`\`\`cpp
+#include <iostream>
+#include <string>
+#include <vector>
+
+// كود C++ لمراقبة استهلاك الطاقة والحماية من الأوفرلود
+class SafePowerDevice {
+private:
+    std::string deviceName;
+    double voltage;           // الفولتية (220V)
+    double currentAmps;       // التيار بالأمبير
+    double maxWattsLimit;     // أقصى حد للأمان بالوات
+    bool isRelayOn;           // حالة المرحل (Relay)
+
+public:
+    SafePowerDevice(std::string name, double v, double limit)
+        : deviceName(name), voltage(v), maxWattsLimit(limit), isRelayOn(true) {}
+
+    // حساب القدرة بالوات (Watt = Voltage * Current)
+    double calculatePowerWatts(double amps) {
+        currentAmps = amps;
+        return voltage * currentAmps;
+    }
+
+    // فحص السلامة وفصل التيار تلقائياً عند تجاوز الحد
+    void monitorSafety(double amps) {
+        double currentWatts = calculatePowerWatts(amps);
+        
+        std::cout << "----------------------------------------" << std::endl;
+        std::cout << "🎮 الجهاز: " << deviceName << std::endl;
+        std::cout << "⚡ الفولتية: " << voltage << " V | التيار: " << amps << " A" << std::endl;
+        std::cout << "📊 القدرة الحالية: " << currentWatts << " W" << std::endl;
+
+        if (currentWatts > maxWattsLimit) {
+            isRelayOn = false;
+            std::cout << "🔴 [تنبيه خطر!]: تم تجاوز حد الأمان (" << maxWattsLimit << " W)" << std::endl;
+            std::cout << "🛑 إجراء الذكاء الاصطناعي: فصل المرحل تلقائياً (Relay CUT-OFF) للحماية من الحريق!" << std::endl;
+        } else {
+            isRelayOn = true;
+            std::cout << "🟢 حالة النظام: آمن وتعمل الدائرة بنجاح." << std::endl;
+        }
+    }
+};
+
+int main() {
+    std::cout << "=== Safe Power AI - C++ Telemetry System ===" << std::endl;
+
+    // إنشاء كائن تكييف الهواء بحد أقصى 3000 وات
+    SafePowerDevice airConditioner("تكييف غرفة المعيشة", 220.0, 3000.0);
+
+    // تجربة تيار طبيعي (10 أمبير -> 2200 وات)
+    airConditioner.monitorSafety(10.0);
+
+    // تجربة تيار حمل زائد (16 أمبير -> 3520 وات)
+    airConditioner.monitorSafety(16.0);
+
+    return 0;
+}
+\`\`\`
+
+### 💡 شرح الكود:
+1. **calculatePowerWatts**: تقوم بحساب استهلاك الطاقة بالوات بناءً على قانون أوم الفولت × الأمبير (W = V × I).
+2. **monitorSafety**: تفحص القراءة الحالية؛ وإذا تجاوزت القدرة الحد الأقصى للأمان (maxWattsLimit)، تقوم بفصل التيار عن الجهاز تلقائياً ومنع الحريق أو تلف السلك.
+3. يمكنك تشغيل هذا الكود في أي بيئة C++ مثل **Visual Studio Code, Code::Blocks, GCC Compiler** أو رفعه على **Arduino / ESP32**.`;
+    }
+
+    // 2. General Code / Python / JS / Web Requests
+    if (q.includes('python') || q.includes('باثون') || q.includes('بايثون')) {
+      return `بالتأكيد! إليك كود **Python** لحساب استهلاك الكهرباء وتوقع الفاتورة الشهرية:
+
+\`\`\`python
+# كود بايثون لحساب استهلاك الأجهزة وتوقع الفاتورة
+def calculate_electricity_bill(watts, hours_per_day, rate_per_kwh=0.18):
+    # حساب الاستهلاك اليومي بالكيلووات/ساعة
+    daily_kwh = (watts * hours_per_day) / 1000.0
+    monthly_kwh = daily_kwh * 30
+    estimated_cost = monthly_kwh * rate_per_kwh
+    
+    return {
+        "daily_kwh": round(daily_kwh, 2),
+        "monthly_kwh": round(monthly_kwh, 2),
+        "estimated_cost_usd": round(estimated_cost, 2)
+    }
+
+# تجربة جهاز بقوة 2200 وات يعمل 8 ساعات يومياً
+device_stats = calculate_electricity_bill(watts=2200, hours_per_day=8)
+print(f"⚡ الاستهلاك اليومي: {device_stats['daily_kwh']} kWh")
+print(f"📊 الاستهلاك الشهري: {device_stats['monthly_kwh']} kWh")
+print(f"💵 التكلفة التقديرية: ${device_stats['estimated_cost_usd']}")
+\`\`\`
+يمكنك تشغيل الكود مباشرة في بيئة Python 3!`;
+    }
+
+    if (q.includes('javascript') || q.includes('js') || q.includes('html') || q.includes('css')) {
+      return `إليك كود **JavaScript / Web** لحساب استهلاك الطاقة وعرض مؤشر الخطر مباشرة في المتصفح:
+
+\`\`\`javascript
+// حساب مؤشر خطر الحمل الكهربائي
+function checkElectricalRisk(currentWatts, maxThreshold = 3500) {
+  const riskPercentage = Math.min(100, Math.round((currentWatts / maxThreshold) * 100));
+  let status = "SAFE";
+  
+  if (riskPercentage > 90) status = "DANGER";
+  else if (riskPercentage > 70) status = "WARNING";
+  
+  return {
+    watts: currentWatts,
+    risk: riskPercentage,
+    status: status
+  };
+}
+
+console.log(checkElectricalRisk(2400)); // SAFE
+console.log(checkElectricalRisk(3800)); // DANGER
+\`\`\``;
+    }
+
+    // 3. General Greetings & Conversational Queries (ChatGPT Style)
+    if (q === 'hi' || q === 'hello' || q === 'مرحبا' || q === 'مرحبا بك' || q === 'ازيك' || q === 'السلام عليكم' || q === 'أهلا' || q === 'اهلين') {
+      return `وعليكم السلام ورحمة الله وبركاته! أهلاً بك. أنا **Safe Power AI**، مساعدك الذكي المتقدم لإدارة الطاقة وحماية الشبكات الكهربائية وكتابة الأكواد والحلول البرمجية والهندسية.
+
+كيف يمكنني مساعدتك اليوم؟
+- 💻 كتابة وتطوير أكواد برمجية (C++, Python, JavaScript, Embedded Systems)
+- ⚡ تحليل استهلاك الكهرباء والأحمال الكهربائية الحية
+- 🛡️ تقييم سلامة الأجهزة والوقاية من أحمال الأوفرلود والحريق
+- 💡 نصائح تقليل فاتورة الكهرباء وتحسين كفاءة الطاقة`;
+    }
+
+    if (q.includes('مين انت') || q.includes('من انت') || q.includes('who are you') || q.includes('what are you')) {
+      return `أنا **Safe Power AI** 🤖 — نموذج ذكاء اصطناعي محترف مخصص لإدارة وحماية المنظومات الكهربائية، الإجابة عن التساؤلات البرمجية والهندسية، وتطوير أكواد الأنظمة المدمجة والحماية الذكية.
+
+أنا هنا لمساعدتك في كتابة البرامج، تحليل استهلاك الطاقة، وفحص أمان أجهزتك الكهربائية لحظياً!`;
+    }
+
+    // 4. Specific System Context Queries
+    if (q.includes('analyze my energy') || q.includes('consumption') || q.includes('تحليل') || q.includes('استهلاك')) {
       return `### ⚡ Energy Consumption Analysis
 Based on real-time telemetry from your smart home network:
 - **Total Devices Registered:** ${devList.length} devices
@@ -123,7 +262,7 @@ ${topConsumer ? `📌 **Top Energy Drainer:** \`${topConsumer.name}\` in \`${top
 **Recommendation:** Consider lowering maximum duty hours on high-wattage appliances during peak electricity tariff hours (6 PM - 10 PM) to optimize utility billing.`;
     }
 
-    if (q.includes('safe') || q.includes('load')) {
+    if (q.includes('safe') || q.includes('load') || q.includes('أمان') || q.includes('حمل')) {
       const isOverloaded = totalWatts > 3500;
       return `### 🛡️ Electrical Safety Assessment
 - **Current System Status:** ${isOverloaded ? '⚠️ **ELEVATED LOAD WARNING**' : '✅ **NORMAL & SAFE**'}
@@ -133,7 +272,7 @@ ${topConsumer ? `📌 **Top Energy Drainer:** \`${topConsumer.name}\` in \`${top
 ${isOverloaded ? '⚠️ **Caution:** Your current power draw exceeds 3,500W. Stagger high-wattage appliances like ACs and Washers to prevent circuit breaker tripping.' : 'Everything looks optimal! No thermal overheating or wire overload risks detected.'}`;
     }
 
-    if (q.includes('most energy') || q.includes('device')) {
+    if (q.includes('most energy') || q.includes('device') || q.includes('جهاز')) {
       if (!topConsumer) {
         return `You currently have no active devices registered. Click **"+ Add Device"** in your devices dashboard to start tracking!`;
       }
@@ -149,7 +288,7 @@ The highest energy-consuming device in your home is:
 **Tip:** Enable **Auto-Shutdown** on this device to automatically disconnect it when daily working hours are exceeded.`;
     }
 
-    if (q.includes('reduce') || q.includes('waste')) {
+    if (q.includes('reduce') || q.includes('waste') || q.includes('توفير') || q.includes('ترشيد')) {
       return `### 🌿 Energy Waste Reduction Plan
 Here are 3 actionable AI recommendations to reduce your power bill by up to **24%**:
 
@@ -161,26 +300,16 @@ Here are 3 actionable AI recommendations to reduce your power bill by up to **24
    Set maximum operating hours on TV, computers, and dimmable lighting to prevent overnight idle power drain.`;
     }
 
-    if (q.includes('status') || q.includes('check')) {
-      const activeAlerts = alertList.filter(a => a.status === 'Active');
-      return `### 🔍 Safe Power System Health Check
-- **Overall System Health:** **98.8% Optimal**
-- **Active Safety Alerts:** \`${activeAlerts.length} Active Alerts\`
-- **Passcode Authorization Lock:** Enforced
-- **Real-Time Telemetry Loop:** Sub-second sync active
+    // 5. Default General Intelligence Fallback (ChatGPT Style Answer)
+    return `أهلاً بك! لقد استلمت سؤالك: **"${query}"**.
 
-${activeAlerts.length > 0 ? `⚠️ **Attention Required:** You have ${activeAlerts.length} unresolved safety alerts. Review the Alerts tab in your console.` : 'No critical electrical hazards or short-circuit anomalies detected.'}`;
-    }
+بصفتي **Safe Power AI** 🤖، يمكنني الإجابة عن كافة التساؤلات والبرامج الهندسية.
 
-    return `Thank you for asking! I'm **Safe Power AI**, your dedicated electrical safety and energy management assistant.
+إذا كنت تبحث عن كود برمجي محدد:
+- اكتب: **"كود C++ لـ [اسم الموضوع]"**
+- أو اكتب: **"كود Python لـ [الموضوع]"**
 
-I can help you with:
-- Analyzing appliance energy consumption
-- Checking live electrical load safety & thermal risk
-- Identifying high-wattage power drainers
-- Suggesting automated energy cost reduction plans
-
-Feel free to pick one of the suggested prompts or type your query below!`;
+أو اسألني عن حالة الطاقة الكهربائية، سلامة الأحمال، أو كيفية حماية الأجهزة من الاحتراق والتلف!`;
   }
 
   function handleKeyDown(e) {
@@ -190,18 +319,47 @@ Feel free to pick one of the suggested prompts or type your query below!`;
     }
   }
 
-  // Simple Markdown Renderer Helper
+  // Markdown Renderer Helper with Code Blocks & Syntax Highlight Containers
   function renderMarkdown(text) {
     if (!text) return '';
-    let formatted = text
-      .replace(/^### (.*$)/gim, '<h3 style="font-size: 16px; font-weight: 800; color: #FACC15; margin: 10px 0 6px 0;">$1</h3>')
-      .replace(/^## (.*$)/gim, '<h4 style="font-size: 15px; font-weight: 700; color: #38BDF8; margin: 8px 0 4px 0;">$1</h4>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #F8FAFC;">$1</strong>')
-      .replace(/`([^`]+)`/g, '<code style="background: rgba(56,189,248,0.15); color: #38BDF8; padding: 2px 6px; border-radius: 4px; font-size: 12px;">$1</code>')
-      .replace(/^\- (.*$)/gim, '<li style="margin-left: 16px; list-style-type: disc; color: #CBD5E1;">$1</li>')
-      .replace(/^\d+\. (.*$)/gim, '<li style="margin-left: 16px; list-style-type: decimal; color: #CBD5E1;">$1</li>')
-      .replace(/\n/g, '<br />');
-    return formatted;
+    let html = text;
+
+    // Code blocks ```lang ... ```
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+      const language = (lang || 'CODE').toUpperCase();
+      const escapedCode = code
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      return `<div style="background: #090D16; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; margin: 12px 0; overflow: hidden; font-family: monospace;">
+        <div style="background: #161F30; padding: 6px 14px; color: #38BDF8; font-size: 11px; font-weight: 800; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; letter-spacing: 0.5px;">
+          <span>💻 ${language}</span>
+          <span style="color: #94A3B8; font-size: 10px; font-weight: 600;">Safe Power AI Code Block</span>
+        </div>
+        <pre style="margin: 0; padding: 14px; font-size: 13px; color: #E2E8F0; overflow-x: auto; line-height: 1.5; white-space: pre-wrap; font-family: Consolas, Monaco, 'Andale Mono', monospace;"><code>${escapedCode}</code></pre>
+      </div>`;
+    });
+
+    // Inline code `code`
+    html = html.replace(/`([^`]+)`/g, '<code style="background: rgba(56,189,248,0.15); color: #38BDF8; padding: 2px 6px; border-radius: 4px; font-size: 12.5px; font-family: monospace;">$1</code>');
+
+    // Headers
+    html = html.replace(/^### (.*$)/gim, '<h3 style="font-size: 16px; font-weight: 800; color: #FACC15; margin: 12px 0 6px 0;">$1</h3>');
+    html = html.replace(/^## (.*$)/gim, '<h4 style="font-size: 15px; font-weight: 700; color: #38BDF8; margin: 10px 0 4px 0;">$1</h4>');
+    html = html.replace(/^# (.*$)/gim, '<h2 style="font-size: 18px; font-weight: 900; color: #F8FAFC; margin: 14px 0 8px 0;">$1</h2>');
+
+    // Bold & Italics
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #F8FAFC; font-weight: 700;">$1</strong>');
+    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+    // Lists
+    html = html.replace(/^\- (.*$)/gim, '<li style="margin-left: 18px; list-style-type: disc; color: #CBD5E1; margin-bottom: 3px;">$1</li>');
+    html = html.replace(/^\d+\. (.*$)/gim, '<li style="margin-left: 18px; list-style-type: decimal; color: #CBD5E1; margin-bottom: 3px;">$1</li>');
+
+    // Newlines
+    html = html.replace(/\n/g, '<br />');
+
+    return html;
   }
 
   return (
