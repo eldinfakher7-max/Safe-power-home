@@ -110,7 +110,7 @@ export default function HomePage() {
           {/* Right Side Authentication Buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }} className="desktop-nav-auth">
             {isLoggedIn ? (
-              <Link href="/dashboard" style={{
+              <Link href="/chat" style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
@@ -124,8 +124,8 @@ export default function HomePage() {
                 boxShadow: '0 4px 14px rgba(201, 42, 42, 0.25)',
                 transition: 'var(--transition)'
               }}>
-                <i className="fa-solid fa-chart-pie" />
-                <span>My Dashboard</span>
+                <i className="fa-solid fa-robot" />
+                <span>Safe Power AI Chat</span>
                 {user && <span style={{ fontSize: '11px', opacity: 0.8, background: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: '99px' }}>{user.name || 'User'}</span>}
               </Link>
             ) : (

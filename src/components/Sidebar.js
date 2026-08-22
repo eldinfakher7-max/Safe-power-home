@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
 const userNavLinks = [
+  { href: '/chat', icon: 'fa-robot', label: 'Safe Power AI Chat' },
   { href: '/dashboard', icon: 'fa-gauge', label: 'Dashboard' },
   { href: '/devices', icon: 'fa-microchip', label: 'My Devices' },
   { href: '/live', icon: 'fa-chart-line', label: 'Live Monitor' },
@@ -19,6 +20,7 @@ const userNavLinks = [
 ];
 
 const adminNavLinks = [
+  { href: '/chat', icon: 'fa-robot', label: 'Safe Power AI Chat' },
   { href: '/dashboard', icon: 'fa-gauge', label: 'Dashboard' },
   { href: '/admin/users', icon: 'fa-users', label: 'Manage Users' },
   { href: '/admin/devices', icon: 'fa-microchip', label: 'All Devices' },
