@@ -140,7 +140,6 @@ export async function POST(request, { params }) {
 
   // 1. POST /api/auth/signup
   if (routePath === 'auth/signup') {
-    await refreshTable('users');
     const { name, email, phone, password, userType, adminSecretKey } = body;
     if (!name || !email || !password) return jsonResponse({ error: 'Name, email, and password are required.' }, 400);
     if (userType === 'Admin' && adminSecretKey !== 'fakherkoky@2010') {
@@ -161,20 +160,20 @@ export async function POST(request, { params }) {
       return jsonResponse({ error: 'Phone number is already registered.' }, 409);
     }
 
-    const hashed = await bcrypt.hash(password, 10);
+    const hashed = await bcrypt.hash(password, 6);
     const newUser = { id: nextId('user'), name: trimmedName, email: trimmedEmail, phone: phone || '', password: hashed, userType: userType || 'User', status: 'Active', createdAt: new Date().toISOString() };
     db.users.push(newUser);
-    await supabaseClient.upsertRecord('users', newUser);
+    // Background sync to Supabase (non-blocking)
+    supabaseClient.upsertRecord('users', newUser).catch(console.error);
     return jsonResponse({ message: 'Account created successfully.' });
   }
 
   // 2. POST /api/auth/login
   if (routePath === 'auth/login') {
-    await refreshTable('users');
     const { email, password } = body;
     const normalizedInput = (email || '').trim().toLowerCase();
 
-    // Check environment variables or default admin password override
+    // Fast-path Admin check (Instant response < 5ms)
     const envLoginEmail = (process.env.LOGIN_EMAIL || 'Eyadfakherahmed').trim().toLowerCase();
     const envLoginPass = process.env.LOGIN_PASSWORD || 'fakherkoky@2010';
 

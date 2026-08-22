@@ -68,39 +68,24 @@ async function initStore() {
   if (initialized) return;
   initialized = true;
 
-  // Sync with Supabase if configured
+  // Sync with Supabase in parallel for maximum speed
   if (supabaseClient.isConfigured()) {
     try {
-      const u = await supabaseClient.fetchTable('users');
-      if (u && u.length > 0) db.users = u;
-
-      const d = await supabaseClient.fetchTable('devices');
-      if (d && d.length > 0) db.devices = d;
-
-      const a = await supabaseClient.fetchTable('alerts');
-      if (a && a.length > 0) db.alerts = a;
-
-      const c = await supabaseClient.fetchTable('complaints');
-      if (c && c.length > 0) db.complaints = c;
-
-      const cm = await supabaseClient.fetchTable('complaint_messages');
-      if (cm && cm.length > 0) db.complaintMessages = cm;
-
-      const ar = await supabaseClient.fetchTable('auth_requests');
-      if (ar && ar.length > 0) db.authRequests = ar;
-
-      const n = await supabaseClient.fetchTable('notifications');
-      if (n && n.length > 0) db.notifications = n;
-
-      const l = await supabaseClient.fetchTable('logs');
-      if (l && l.length > 0) db.logs = l;
-
-      const s = await supabaseClient.fetchTable('settings');
-      if (s && s.length > 0) {
-        s.forEach(item => {
-          db.settings[item.key] = item.value;
-        });
-      }
+      await Promise.allSettled([
+        supabaseClient.fetchTable('users').then(u => { if (u && u.length > 0) db.users = u; }),
+        supabaseClient.fetchTable('devices').then(d => { if (d && d.length > 0) db.devices = d; }),
+        supabaseClient.fetchTable('alerts').then(a => { if (a && a.length > 0) db.alerts = a; }),
+        supabaseClient.fetchTable('complaints').then(c => { if (c && c.length > 0) db.complaints = c; }),
+        supabaseClient.fetchTable('complaint_messages').then(cm => { if (cm && cm.length > 0) db.complaintMessages = cm; }),
+        supabaseClient.fetchTable('auth_requests').then(ar => { if (ar && ar.length > 0) db.authRequests = ar; }),
+        supabaseClient.fetchTable('notifications').then(n => { if (n && n.length > 0) db.notifications = n; }),
+        supabaseClient.fetchTable('logs').then(l => { if (l && l.length > 0) db.logs = l; }),
+        supabaseClient.fetchTable('settings').then(s => {
+          if (s && s.length > 0) {
+            s.forEach(item => { db.settings[item.key] = item.value; });
+          }
+        })
+      ]);
       
       // Update local ID counters to avoid collisions
       updateCounter(db.users, 'user');
