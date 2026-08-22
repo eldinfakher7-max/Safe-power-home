@@ -163,8 +163,9 @@ export async function POST(request, { params }) {
     const hashed = await bcrypt.hash(password, 6);
     const newUser = { id: nextId('user'), name: trimmedName, email: trimmedEmail, phone: phone || '', password: hashed, userType: userType || 'User', status: 'Active', createdAt: new Date().toISOString() };
     db.users.push(newUser);
-    // Background sync to Supabase (non-blocking)
-    supabaseClient.upsertRecord('users', newUser).catch(console.error);
+    
+    // Explicitly await Supabase upsert to prevent Vercel Serverless function from terminating prematurely
+    await supabaseClient.upsertRecord('users', newUser);
     return jsonResponse({ message: 'Account created successfully.' });
   }
 

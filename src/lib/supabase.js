@@ -45,7 +45,7 @@ module.exports = {
     }
   },
 
-  // Generic upsert (insert or update) - only sends known safe fields
+  // Generic upsert (insert or update)
   upsertRecord: async (tableName, record) => {
     if (!isConfigured) return;
     try {
@@ -53,6 +53,8 @@ module.exports = {
       const { error } = await supabase.from(tableName).upsert(cleanRecord);
       if (error) {
         console.error(`Supabase error upserting to ${tableName}:`, error.message);
+      } else {
+        console.log(`✅ Successfully synced record to Supabase table: ${tableName}`);
       }
     } catch (err) {
       console.error(`Network error upserting to ${tableName}:`, err.message);
