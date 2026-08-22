@@ -1,7 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
+const supabaseUrl = process.env.SUPABASE_URL || 'https://wpwgrilgfnowqphkqdrn.supabase.co';
+const supabaseKey = process.env.SUPABASE_KEY || 'sb_publishable_HQOgJurAufg1C-NimBMxjQ_k6EURoxu';
 
 let supabase = null;
 let isConfigured = false;
