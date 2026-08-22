@@ -212,6 +212,47 @@ export async function POST(request, { params }) {
     return jsonResponse({ token, user: safeUser });
   }
 
+  // 3. POST /api/ai/chat — Real Live LLM API Endpoint
+  if (routePath === 'ai/chat') {
+    if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    const { prompt, history } = body;
+    if (!prompt) return jsonResponse({ error: 'Prompt is required' }, 400);
+
+    try {
+      const systemContext = `You are Safe Power AI, an advanced, highly intelligent AI assistant (like ChatGPT & Gemini) built for the Safe Power Home AI platform.
+You assist users with ANY question:
+- Generating complete, clean, working code in C++, Python, JavaScript, HTML/CSS, C/Arduino/ESP32, SQL.
+- Electrical engineering, energy consumption telemetry, load safety, circuit breaker limits, and thermal management.
+- General knowledge, math, explanations, and advice in fluent Arabic or English.
+Always format code snippets clearly inside markdown code blocks with the language tag (e.g. \`\`\`cpp ... \`\`\` or \`\`\`python ... \`\`\`). Provide full, complete, high-quality answers.`;
+
+      const aiRes = await fetch('https://text.pollinations.ai/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [
+            { role: 'system', content: systemContext },
+            ...(history || []).slice(-6).map(h => ({ role: h.sender === 'user' ? 'user' : 'assistant', content: h.text })),
+            { role: 'user', content: prompt }
+          ],
+          model: 'openai',
+          jsonMode: false
+        })
+      });
+
+      if (aiRes.ok) {
+        const replyText = await aiRes.text();
+        if (replyText && replyText.trim().length > 0) {
+          return jsonResponse({ response: replyText.trim() });
+        }
+      }
+    } catch (err) {
+      console.error('Real LLM API call error:', err);
+    }
+
+    return jsonResponse({ response: `أهلاً بك! استلمت سؤالك: **"${prompt}"**.\n\nحدث خطأ مؤقت في الاتصال بالنموذج الحي، يرجى إعادة المحاولة.` });
+  }
+
   // 3. POST /api/devices
   if (routePath === 'devices') {
     if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);

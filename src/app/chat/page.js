@@ -78,6 +78,8 @@ export default function AIChatPage() {
     const text = (textToSend || inputMsg).trim();
     if (!text) return;
 
+    const token = typeof window !== 'undefined' ? localStorage.getItem('sph_token') : null;
+
     const userMessage = {
       id: Date.now(),
       sender: 'user',
@@ -89,18 +91,48 @@ export default function AIChatPage() {
     if (!textToSend) setInputMsg('');
     setIsTyping(true);
 
-    // Generate intelligent AI Response based on context
-    setTimeout(() => {
-      const aiReply = generateAIResponse(text, devices, alerts);
-      const aiMessage = {
-        id: Date.now() + 1,
-        sender: 'ai',
-        text: aiReply,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, aiMessage]);
-      setIsTyping(false);
-    }, 1200);
+    try {
+      // Call Real Live LLM API Endpoint
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          prompt: text,
+          history: messages
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.response) {
+          const aiMessage = {
+            id: Date.now() + 1,
+            sender: 'ai',
+            text: data.response,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+          setMessages(prev => [...prev, aiMessage]);
+          setIsTyping(false);
+          return;
+        }
+      }
+    } catch (e) {
+      console.error('Error calling live AI endpoint:', e);
+    }
+
+    // Fallback to local intelligent AI response if API offline
+    const aiReply = generateAIResponse(text, devices, alerts);
+    const aiMessage = {
+      id: Date.now() + 1,
+      sender: 'ai',
+      text: aiReply,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setMessages(prev => [...prev, aiMessage]);
+    setIsTyping(false);
   }
 
   function generateAIResponse(query, devList, alertList) {
