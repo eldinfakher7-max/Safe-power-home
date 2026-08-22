@@ -27,7 +27,7 @@ export default function LoginPage() {
       if (res.ok) {
         localStorage.setItem('sph_token', data.token);
         localStorage.setItem('sph_user', JSON.stringify(data.user));
-        router.push('/dashboard');
+        router.push('/chat');
       } else {
         setError(data.error || 'Login failed. Please try again.');
       }
