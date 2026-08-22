@@ -66,12 +66,12 @@ export default function HomePage() {
               width: '42px',
               height: '42px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%)',
+              background: 'linear-gradient(135deg, #C92A2A 0%, #A61E1E 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: '#FFFFFF',
-              boxShadow: '0 4px 14px rgba(30, 58, 138, 0.3)'
+              boxShadow: '0 4px 14px rgba(201, 42, 42, 0.3)'
             }}>
               <i className="fa-solid fa-shield-halved" style={{ fontSize: '20px' }} />
             </div>
@@ -79,7 +79,7 @@ export default function HomePage() {
               <span style={{ fontWeight: 900, fontSize: '18px', letterSpacing: '-0.5px', color: 'var(--primary)', display: 'block', lineHeight: 1.1 }}>
                 Safe Power Home
               </span>
-              <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--secondary)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--brand-red)', letterSpacing: '1px', textTransform: 'uppercase' }}>
                 AI Energy Protection
               </span>
             </div>
@@ -116,12 +116,12 @@ export default function HomePage() {
                 gap: '8px',
                 padding: '10px 20px',
                 borderRadius: '12px',
-                background: 'linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%)',
+                background: 'linear-gradient(135deg, #C92A2A 0%, #A61E1E 100%)',
                 color: '#FFFFFF',
                 fontWeight: 700,
                 fontSize: '14px',
                 textDecoration: 'none',
-                boxShadow: '0 4px 14px rgba(30, 58, 138, 0.25)',
+                boxShadow: '0 4px 14px rgba(201, 42, 42, 0.25)',
                 transition: 'var(--transition)'
               }}>
                 <i className="fa-solid fa-chart-pie" />
@@ -140,7 +140,7 @@ export default function HomePage() {
                   fontWeight: 700,
                   fontSize: '14px',
                   textDecoration: 'none',
-                  border: '1px solid rgba(30, 58, 138, 0.2)',
+                  border: '1px solid var(--border)',
                   transition: 'var(--transition)'
                 }}>
                   Login
@@ -152,12 +152,12 @@ export default function HomePage() {
                   gap: '6px',
                   padding: '10px 22px',
                   borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%)',
+                  background: 'linear-gradient(135deg, #C92A2A 0%, #A61E1E 100%)',
                   color: '#FFFFFF',
                   fontWeight: 700,
                   fontSize: '14px',
                   textDecoration: 'none',
-                  boxShadow: '0 4px 16px rgba(59, 130, 246, 0.35)',
+                  boxShadow: '0 4px 16px rgba(201, 42, 42, 0.35)',
                   transition: 'var(--transition)'
                 }}>
                   <span>Sign Up</span>
@@ -299,12 +299,12 @@ export default function HomePage() {
                 <Link href="/dashboard" style={{
                   padding: '14px 32px',
                   borderRadius: '14px',
-                  background: 'linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%)',
+                  background: 'linear-gradient(135deg, #C92A2A 0%, #A61E1E 100%)',
                   color: '#FFFFFF',
                   fontWeight: 800,
                   fontSize: '16px',
                   textDecoration: 'none',
-                  boxShadow: '0 8px 24px rgba(30, 58, 138, 0.3)',
+                  boxShadow: '0 8px 24px rgba(201, 42, 42, 0.3)',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '10px'
@@ -316,12 +316,12 @@ export default function HomePage() {
                 <Link href="/signup" style={{
                   padding: '14px 32px',
                   borderRadius: '14px',
-                  background: 'linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%)',
+                  background: 'linear-gradient(135deg, #C92A2A 0%, #A61E1E 100%)',
                   color: '#FFFFFF',
                   fontWeight: 800,
                   fontSize: '16px',
                   textDecoration: 'none',
-                  boxShadow: '0 8px 24px rgba(30, 58, 138, 0.3)',
+                  boxShadow: '0 8px 24px rgba(201, 42, 42, 0.3)',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '10px'
@@ -741,12 +741,12 @@ export default function HomePage() {
               <Link href="/dashboard" style={{
                 padding: '16px 36px',
                 borderRadius: '14px',
-                background: 'linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%)',
+                background: 'linear-gradient(135deg, #C92A2A 0%, #A61E1E 100%)',
                 color: '#FFFFFF',
                 fontWeight: 800,
                 fontSize: '16px',
                 textDecoration: 'none',
-                boxShadow: '0 8px 24px rgba(30, 58, 138, 0.3)'
+                boxShadow: '0 8px 24px rgba(201, 42, 42, 0.3)'
               }}>
                 Open My Dashboard
               </Link>
@@ -755,12 +755,12 @@ export default function HomePage() {
                 <Link href="/signup" style={{
                   padding: '16px 36px',
                   borderRadius: '14px',
-                  background: 'linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%)',
+                  background: 'linear-gradient(135deg, #C92A2A 0%, #A61E1E 100%)',
                   color: '#FFFFFF',
                   fontWeight: 800,
                   fontSize: '16px',
                   textDecoration: 'none',
-                  boxShadow: '0 8px 24px rgba(30, 58, 138, 0.3)'
+                  boxShadow: '0 8px 24px rgba(201, 42, 42, 0.3)'
                 }}>
                   Create Free Account
                 </Link>

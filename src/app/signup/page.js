@@ -65,7 +65,7 @@ export default function SignupPage() {
     <div className="auth-page">
       <div className="auth-card" style={{ maxWidth: 480 }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(135deg, #1E3A8A, #4DA3FF)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', boxShadow: '0 8px 30px rgba(30,58,138,0.3)' }}>
+          <div style={{ width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(135deg, #C92A2A, #A61E1E)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', boxShadow: '0 8px 30px rgba(201,42,42,0.3)' }}>
             <i className="fa-solid fa-bolt" style={{ color: 'white', fontSize: 24 }} />
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--primary)' }}>Create Account</h1>

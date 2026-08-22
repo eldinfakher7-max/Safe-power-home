@@ -58,38 +58,32 @@ export default function Sidebar({ open, onClose }) {
     <>
       {open && (
         <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 30 }}
+          className="sidebar-backdrop"
           onClick={onClose}
         />
       )}
 
-      <aside style={{
-        width: 260,
-        minHeight: '100vh',
-        height: '100vh',
-        background: 'var(--card)',
-        borderRight: '1px solid var(--border)',
-        display: 'flex',
-        flexDirection: 'column',
-        position: 'sticky',
-        top: 0,
-        overflowY: 'auto',
-        zIndex: 40,
-        flexShrink: 0,
-        boxShadow: '2px 0 20px rgba(30,58,138,0.06)',
-        transition: 'var(--transition)',
-      }}>
+      <aside className={`sidebar ${open ? 'open' : ''}`}>
         {/* Logo */}
-        <div style={{ padding: '24px 20px 16px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #1E3A8A, #4DA3FF)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(30,58,138,0.3)' }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #C92A2A, #A61E1E)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(201,42,42,0.35)', flexShrink: 0 }}>
               <i className="fa-solid fa-bolt" style={{ color: 'white', fontSize: 18 }} />
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--primary)', lineHeight: 1.2 }}>Smart Power</div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: 0.5 }}>HOME AI</div>
+              <div style={{ fontSize: 10, color: 'var(--brand-red)', fontWeight: 800, letterSpacing: 0.5 }}>HOME AI</div>
             </div>
           </div>
+
+          <button
+            onClick={onClose}
+            className="sidebar-close-btn"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18, padding: 4 }}
+            aria-label="Close Sidebar"
+          >
+            <i className="fa-solid fa-xmark" />
+          </button>
         </div>
 
         {/* User chip */}
@@ -98,8 +92,8 @@ export default function Sidebar({ open, onClose }) {
             <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
               <span style={{
-                background: user.userType === 'Admin' ? 'rgba(30,58,138,0.12)' : 'rgba(77,163,255,0.12)',
-                color: user.userType === 'Admin' ? 'var(--primary)' : 'var(--secondary)',
+                background: user.userType === 'Admin' ? 'rgba(201,42,42,0.12)' : 'rgba(122,75,42,0.12)',
+                color: user.userType === 'Admin' ? 'var(--brand-red)' : 'var(--secondary)',
                 padding: '1px 8px', borderRadius: 99, fontWeight: 700, fontSize: 10
               }}>{user.userType}</span>
             </div>
@@ -127,7 +121,7 @@ export default function Sidebar({ open, onClose }) {
           <button
             onClick={logout}
             className="nav-link"
-            style={{ width: '100%', color: 'var(--danger)', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)', cursor: 'pointer' }}
+            style={{ width: '100%', color: 'var(--brand-red)', background: 'rgba(201,42,42,0.06)', border: '1px solid rgba(201,42,42,0.15)', cursor: 'pointer' }}
           >
             <i className="fa-solid fa-arrow-right-from-bracket" style={{ width: 18, textAlign: 'center', fontSize: 14 }} />
             <span>Logout</span>

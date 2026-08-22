@@ -44,7 +44,7 @@ export default function LoginPage() {
       <div className="auth-card">
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ width: 64, height: 64, borderRadius: 18, background: 'linear-gradient(135deg, #1E3A8A, #4DA3FF)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 8px 30px rgba(30,58,138,0.3)' }}>
+          <div style={{ width: 64, height: 64, borderRadius: 18, background: 'linear-gradient(135deg, #C92A2A, #A61E1E)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 8px 30px rgba(201,42,42,0.3)' }}>
             <i className="fa-solid fa-bolt" style={{ color: 'white', fontSize: 28 }} />
           </div>
           <h1 style={{ fontSize: 26, fontWeight: 900, color: 'var(--primary)', letterSpacing: -0.5 }}>Smart Power Home</h1>
