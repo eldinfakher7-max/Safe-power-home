@@ -48,7 +48,8 @@ export default function Sidebar({ open, onClose }) {
     if (u) setUser(JSON.parse(u));
   }, []);
 
-  const links = user?.userType === 'Admin' ? adminNavLinks : userNavLinks;
+  const rawLinks = user?.userType === 'Admin' ? adminNavLinks : userNavLinks;
+  const links = rawLinks.filter(l => l.href !== '/chat' || !!user?.isAIAuthorized);
 
   function logout() {
     localStorage.removeItem('sph_token');

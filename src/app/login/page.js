@@ -27,7 +27,11 @@ export default function LoginPage() {
       if (res.ok) {
         localStorage.setItem('sph_token', data.token);
         localStorage.setItem('sph_user', JSON.stringify(data.user));
-        router.push('/chat');
+        if (data.user?.isAIAuthorized) {
+          router.push('/chat');
+        } else {
+          router.push('/dashboard');
+        }
       } else {
         setError(data.error || 'Login failed. Please try again.');
       }

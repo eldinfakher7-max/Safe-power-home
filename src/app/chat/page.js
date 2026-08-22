@@ -30,11 +30,20 @@ export default function AIChatPage() {
         router.push('/login');
         return;
       }
+      let parsedUser = null;
       if (u) {
         try {
-          setUser(JSON.parse(u));
+          parsedUser = JSON.parse(u);
         } catch (e) {}
       }
+
+      // STRICT PROTECTION: If not dedicated AI account, deny access and redirect to dashboard
+      if (!parsedUser || !parsedUser.isAIAuthorized) {
+        router.push('/dashboard');
+        return;
+      }
+
+      setUser(parsedUser);
       fetchContextData(token);
     }
   }, []);

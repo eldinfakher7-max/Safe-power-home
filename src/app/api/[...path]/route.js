@@ -173,30 +173,47 @@ export async function POST(request, { params }) {
     const { email, password } = body;
     const normalizedInput = (email || '').trim().toLowerCase();
 
-    // Fast-path Admin check (Instant response < 5ms)
-    const envLoginEmail = (process.env.LOGIN_EMAIL || 'Eyadfakherahmed').trim().toLowerCase();
-    const envLoginPass = process.env.LOGIN_PASSWORD || 'fakherkoky@2010';
+    // Check Dedicated AI Account credentials securely
+    const aiAccessEmail = (process.env.AI_ACCESS_EMAIL || process.env.LOGIN_EMAIL || 'eyadfakherahmed').trim().toLowerCase();
+    const aiAccessPassword = process.env.AI_ACCESS_PASSWORD || process.env.LOGIN_PASSWORD || 'fakherkoky@2010';
 
-    if (password === envLoginPass || password === 'fakherkoky@2010') {
-      let adminUser = db.users.find(u => 
-        u.email.toLowerCase() === normalizedInput || 
-        (u.name || '').toLowerCase().includes('eyad') || 
-        u.userType === 'Admin'
+    const isDedicatedAIAccount = (
+      normalizedInput === aiAccessEmail ||
+      normalizedInput === 'eyadfakherahmed' ||
+      normalizedInput === 'eyadfakherahmed@gmail.com' ||
+      normalizedInput === 'eyadfakherahmed@smartpowerhome.com'
+    ) && (password === aiAccessPassword);
+
+    if (isDedicatedAIAccount) {
+      let aiUser = db.users.find(u => 
+        u.email.toLowerCase().includes('eyad') || 
+        (u.name || '').toLowerCase().includes('eyad')
       );
-      if (!adminUser) {
-        adminUser = { 
-          id: 'user_eyad_admin', 
+      if (!aiUser) {
+        aiUser = { 
+          id: 'user_eyad_ai', 
           name: 'Eyad Fakher Ahmed', 
-          email: email || 'Eyadfakherahmed@gmail.com', 
+          email: 'eyadfakherahmed@gmail.com', 
           userType: 'Admin', 
           status: 'Active' 
         };
       }
-      const token = jwt.sign({ id: adminUser.id, email: adminUser.email, userType: adminUser.userType, name: adminUser.name }, JWT_SECRET, { expiresIn: '24h' });
-      const { password: _, ...safeUser } = adminUser;
-      return jsonResponse({ token, user: safeUser });
+      const tokenPayload = { 
+        id: aiUser.id, 
+        email: aiUser.email, 
+        userType: aiUser.userType, 
+        name: aiUser.name,
+        isAIAuthorized: true 
+      };
+      const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '24h' });
+      const { password: _, ...safeUser } = aiUser;
+      return jsonResponse({ 
+        token, 
+        user: { ...safeUser, isAIAuthorized: true, redirectTo: '/chat' } 
+      });
     }
 
+    // Standard User / Admin Login (DENY AI ACCESS strictly)
     const existingUser = db.users.find(u => 
       u.email.toLowerCase() === normalizedInput || 
       (u.phone && u.phone.replace(/\s+/g, '') === normalizedInput.replace(/\s+/g, '')) ||
@@ -204,16 +221,36 @@ export async function POST(request, { params }) {
     );
     if (!existingUser) return jsonResponse({ error: 'Invalid email, username, or password.' }, 401);
     if (existingUser.status === 'Suspended') return jsonResponse({ error: 'Your account has been suspended. Contact administrator.' }, 403);
+
     const valid = await bcrypt.compare(password, existingUser.password);
     if (!valid) return jsonResponse({ error: 'Invalid password.' }, 401);
-    const token = jwt.sign({ id: existingUser.id, email: existingUser.email, userType: existingUser.userType, name: existingUser.name }, JWT_SECRET, { expiresIn: '24h' });
+
+    const tokenPayload = { 
+      id: existingUser.id, 
+      email: existingUser.email, 
+      userType: existingUser.userType, 
+      name: existingUser.name,
+      isAIAuthorized: false 
+    };
+    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '24h' });
     const { password: _, ...safeUser } = existingUser;
-    return jsonResponse({ token, user: safeUser });
+    return jsonResponse({ 
+      token, 
+      user: { ...safeUser, isAIAuthorized: false, redirectTo: '/dashboard' } 
+    });
   }
 
-  // 3. POST /api/ai/chat — Real Live LLM API Endpoint
+  // 3. POST /api/ai/chat — Exclusive AI Endpoint (Server-Side Protection)
   if (routePath === 'ai/chat') {
-    if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    if (!user) return jsonResponse({ error: 'Unauthorized. Please log in.' }, 401);
+
+    // STRICT SERVER-SIDE AUTHORIZATION CHECK: Only the dedicated AI account is allowed
+    if (!user.isAIAuthorized) {
+      return jsonResponse({ 
+        error: 'AI Access Denied. Only the dedicated AI account (eyadfakherahmed) is authorized to access AI Chat.' 
+      }, 403);
+    }
+
     const { prompt, history } = body;
     if (!prompt) return jsonResponse({ error: 'Prompt is required' }, 400);
 
