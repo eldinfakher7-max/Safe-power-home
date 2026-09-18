@@ -15,6 +15,7 @@ let db = {
   notifications: [],
   settings: {},
   logs: [],
+  passwordResets: [],
 };
 
 let initialized = false;

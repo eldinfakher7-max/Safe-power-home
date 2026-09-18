@@ -47,6 +47,14 @@ export default function LoginPage() {
       if (res.ok) {
         localStorage.setItem('sph_token', data.token);
         localStorage.setItem('sph_user', JSON.stringify(data.user));
+        if (data.user?.mustChangePassword) {
+          setMustChangeModal(true);
+          setPendingToken(data.token);
+          setPendingUser(data.user);
+          setLoading(false);
+          return;
+        }
+
         if (data.user?.isAIAuthorized) {
           router.push('/chat');
         } else {
@@ -61,6 +69,53 @@ export default function LoginPage() {
       setError(err.message || 'Connection error. Please check your network.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  const [mustChangeModal, setMustChangeModal] = useState(false);
+  const [pendingToken, setPendingToken] = useState('');
+  const [pendingUser, setPendingUser] = useState(null);
+  const [newPassForm, setNewPassForm] = useState({ newPassword: '', confirmPassword: '' });
+  const [changePassError, setChangePassError] = useState('');
+  const [changePassLoading, setChangePassLoading] = useState(false);
+
+  async function handleMustChangePassword(e) {
+    e.preventDefault();
+    if (newPassForm.newPassword !== newPassForm.confirmPassword) {
+      setChangePassError('Passwords do not match.');
+      return;
+    }
+    setChangePassLoading(true);
+    setChangePassError('');
+
+    try {
+      const res = await fetch('/api/auth/update-must-change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${pendingToken}`
+        },
+        body: JSON.stringify(newPassForm),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        const updatedUser = { ...pendingUser, mustChangePassword: false };
+        localStorage.setItem('sph_token', pendingToken);
+        localStorage.setItem('sph_user', JSON.stringify(updatedUser));
+        setMustChangeModal(false);
+        if (updatedUser.isAIAuthorized) {
+          router.push('/chat');
+        } else {
+          router.push('/dashboard');
+        }
+      } else {
+        setChangePassError(data.error || 'Failed to update password.');
+      }
+    } catch (err) {
+      setChangePassError('Connection error. Please try again.');
+    } finally {
+      setChangePassLoading(false);
     }
   }
 
@@ -170,7 +225,7 @@ export default function LoginPage() {
               <input type="checkbox" checked={form.rememberMe} onChange={e => setForm(p => ({ ...p, rememberMe: e.target.checked }))} style={{ accentColor: 'var(--primary)' }} />
               Remember me
             </label>
-            <Link href="#" style={{ fontSize: 13, color: 'var(--secondary)', fontWeight: 600, textDecoration: 'none' }}>Forgot Password?</Link>
+            <Link href="/forgot-password" style={{ fontSize: 13, color: 'var(--secondary)', fontWeight: 600, textDecoration: 'none' }}>Forgot Password?</Link>
           </div>
 
           {/* Security CAPTCHA Challenge */}
@@ -215,9 +270,60 @@ export default function LoginPage() {
           <span style={{ color: 'var(--text-muted)' }}>Don't have an account? </span>
           <Link href="/signup" style={{ color: 'var(--secondary)', fontWeight: 700, textDecoration: 'none' }}>Create Account</Link>
         </div>
-
-
       </div>
+
+      {/* Must Change Password Modal */}
+      {mustChangeModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--card-bg, #ffffff)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 440, padding: 24, boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: 22 }}>
+                <i className="fa-solid fa-shield-exclamation" />
+              </div>
+              <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--primary)', margin: 0 }}>Password Change Required</h2>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+                You logged in with a temporary password. You must set a new password before continuing.
+              </p>
+            </div>
+
+            {changePassError && (
+              <div style={{ background: '#FEE2E2', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#DC2626', marginBottom: 16 }}>
+                {changePassError}
+              </div>
+            )}
+
+            <form onSubmit={handleMustChangePassword}>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 4, display: 'block' }}>New Password</label>
+                <input
+                  type="password"
+                  className="form-input"
+                  placeholder="At least 8 chars, 1 uppercase, 1 number"
+                  value={newPassForm.newPassword}
+                  onChange={e => setNewPassForm(p => ({ ...p, newPassword: e.target.value }))}
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 4, display: 'block' }}>Confirm New Password</label>
+                <input
+                  type="password"
+                  className="form-input"
+                  placeholder="Re-enter new password"
+                  value={newPassForm.confirmPassword}
+                  onChange={e => setNewPassForm(p => ({ ...p, confirmPassword: e.target.value }))}
+                  required
+                />
+              </div>
+
+              <button type="submit" className="btn btn-primary" disabled={changePassLoading} style={{ width: '100%', justifyContent: 'center', padding: '10px 16px', borderRadius: 10 }}>
+                {changePassLoading ? 'Updating Password...' : 'Save New Password & Continue'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

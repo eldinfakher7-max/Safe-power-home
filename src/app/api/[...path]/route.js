@@ -616,7 +616,61 @@ You also assist with energy management, appliance safety, and general programmin
     return jsonResponse(reqItem);
   }
 
-  // 11. POST /api/admin/users/:id/status
+  // 11. POST /api/admin/users/:id/reset-password
+  if (pathSegments.length === 4 && pathSegments[0] === 'admin' && pathSegments[1] === 'users' && pathSegments[3] === 'reset-password') {
+    if (!user || user.userType !== 'Admin') {
+      return jsonResponse({ error: 'Access Denied. Admin privileges required.' }, 403, request);
+    }
+
+    const { adminVerificationPassword, newPassword, confirmPassword } = body;
+
+    // Strict Backend Admin Verification Password check
+    const expectedAdminPassword = process.env.ADMIN_VERIFICATION_PASSWORD || process.env.LOGIN_PASSWORD || 'fakherkoky@2010';
+    if (!adminVerificationPassword || adminVerificationPassword !== expectedAdminPassword) {
+      return jsonResponse({ error: 'Invalid admin verification password.' }, 400, request);
+    }
+
+    if (!newPassword || !confirmPassword) {
+      return jsonResponse({ error: 'New password and confirmation are required.' }, 400, request);
+    }
+
+    if (newPassword !== confirmPassword) {
+      return jsonResponse({ error: 'Passwords do not match.' }, 400, request);
+    }
+
+    const policyResult = validatePasswordPolicy(newPassword);
+    if (!policyResult.valid) {
+      return jsonResponse({ error: policyResult.message }, 400, request);
+    }
+
+    await refreshTable('users');
+    const targetUser = db.users.find(u => u.id === pathSegments[2]);
+    if (!targetUser) {
+      return jsonResponse({ error: 'Target user not found.' }, 404, request);
+    }
+
+    targetUser.password = await bcrypt.hash(newPassword, 10);
+    targetUser.mustChangePassword = true;
+
+    await supabaseClient.upsertRecord('users', targetUser);
+
+    // Create Audit Log record
+    const auditLog = {
+      id: nextId('log'),
+      action: 'PASSWORD_RESET',
+      actorId: user.id,
+      actorEmail: user.email,
+      targetUserId: targetUser.id,
+      targetEmail: targetUser.email,
+      timestamp: new Date().toISOString()
+    };
+    db.logs.push(auditLog);
+    await supabaseClient.upsertRecord('logs', auditLog);
+
+    return jsonResponse({ message: 'User password reset successfully. User must change password on next login.' }, 200, request);
+  }
+
+  // 12. POST /api/admin/users/:id/status
   if (pathSegments.length === 4 && pathSegments[0] === 'admin' && pathSegments[1] === 'users' && pathSegments[3] === 'status') {
     if (!user || user.userType !== 'Admin') return jsonResponse({ error: 'Admin only' }, 403);
     const targetUser = db.users.find(u => u.id === pathSegments[2]);
@@ -624,6 +678,211 @@ You also assist with energy management, appliance safety, and general programmin
     targetUser.status = body.status;
     await supabaseClient.upsertRecord('users', targetUser);
     return jsonResponse({ message: 'Status updated' });
+  }
+
+  // 13. POST /api/auth/forgot-password
+  if (routePath === 'auth/forgot-password') {
+    const clientIp = getClientIp(request);
+    const rateCheck = checkRateLimit(clientIp, 'auth_forgot_password', 5, 15 * 60 * 1000);
+    if (!rateCheck.allowed) {
+      return jsonResponse({ error: 'Too many OTP requests. Please try again in 15 minutes.' }, 429, request);
+    }
+
+    const { method, value, captchaId, captchaAnswer } = body;
+    if (captchaId && captchaAnswer) {
+      const isValidCaptcha = verifyCaptchaToken(captchaId, captchaAnswer);
+      if (!isValidCaptcha) {
+        return jsonResponse({ error: 'Security verification failed. Incorrect CAPTCHA answer.' }, 400, request);
+      }
+    }
+
+    if (!value || typeof value !== 'string') {
+      return jsonResponse({ error: 'Email address or Phone number is required.' }, 400, request);
+    }
+
+    const genericMsg = 'If the information is associated with an account, a verification code will be sent.';
+
+    await refreshTable('users');
+
+    let matchedUser = null;
+    if (method === 'phone') {
+      const cleanPhone = value.replace(/\s+/g, '');
+      matchedUser = db.users.find(u => u.phone && u.phone.replace(/\s+/g, '') === cleanPhone);
+    } else {
+      const normEmail = value.trim().toLowerCase();
+      matchedUser = db.users.find(u => (u.email || '').trim().toLowerCase() === normEmail);
+    }
+
+    if (matchedUser) {
+      if (!Array.isArray(db.passwordResets)) db.passwordResets = [];
+
+      // Invalidate existing active resets for this user
+      db.passwordResets.forEach(r => {
+        if (r.userId === matchedUser.id && !r.used) {
+          r.used = true;
+        }
+      });
+
+      // Generate secure 6-digit OTP
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const codeHash = await bcrypt.hash(otpCode, 10);
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+      const resetRecord = {
+        id: nextId('pr'),
+        userId: matchedUser.id,
+        channel: method || 'email',
+        codeHash,
+        expiresAt,
+        attempts: 0,
+        used: false,
+        createdAt: new Date().toISOString()
+      };
+
+      db.passwordResets.push(resetRecord);
+      await supabaseClient.upsertRecord('passwordResets', resetRecord);
+    }
+
+    // Always return generic message to prevent account enumeration
+    return jsonResponse({ message: genericMsg }, 200, request);
+  }
+
+  // 14. POST /api/auth/verify-otp
+  if (routePath === 'auth/verify-otp') {
+    const clientIp = getClientIp(request);
+    const rateCheck = checkRateLimit(clientIp, 'auth_verify_otp', 10, 15 * 60 * 1000);
+    if (!rateCheck.allowed) {
+      return jsonResponse({ error: 'Too many verification attempts. Please try again in 15 minutes.' }, 429, request);
+    }
+
+    const { method, value, code } = body;
+    if (!value || !code) {
+      return jsonResponse({ error: 'Invalid verification code.' }, 400, request);
+    }
+
+    await refreshTable('users');
+    let matchedUser = null;
+    if (method === 'phone') {
+      const cleanPhone = value.replace(/\s+/g, '');
+      matchedUser = db.users.find(u => u.phone && u.phone.replace(/\s+/g, '') === cleanPhone);
+    } else {
+      const normEmail = value.trim().toLowerCase();
+      matchedUser = db.users.find(u => (u.email || '').trim().toLowerCase() === normEmail);
+    }
+
+    if (!matchedUser) {
+      return jsonResponse({ error: 'Invalid verification code.' }, 400, request);
+    }
+
+    const activeResets = (db.passwordResets || []).filter(r => r.userId === matchedUser.id && !r.used);
+    const latestReset = activeResets[activeResets.length - 1];
+
+    if (!latestReset) {
+      return jsonResponse({ error: 'Invalid verification code.' }, 400, request);
+    }
+
+    if (latestReset.attempts >= 5) {
+      return jsonResponse({ error: 'Too many failed attempts. Please request a new code.' }, 429, request);
+    }
+
+    if (new Date() > new Date(latestReset.expiresAt)) {
+      return jsonResponse({ error: 'This verification code has expired. Please request a new code.' }, 400, request);
+    }
+
+    const isMatch = await bcrypt.compare(String(code).trim(), latestReset.codeHash);
+    if (!isMatch) {
+      latestReset.attempts += 1;
+      await supabaseClient.upsertRecord('passwordResets', latestReset);
+      return jsonResponse({ error: 'Invalid verification code.' }, 400, request);
+    }
+
+    latestReset.used = true;
+    await supabaseClient.upsertRecord('passwordResets', latestReset);
+
+    // Issue short-lived secure reset session token (10 min)
+    const resetToken = jwt.sign(
+      { userId: matchedUser.id, purpose: 'password_reset' },
+      JWT_SECRET,
+      { expiresIn: '10m' }
+    );
+
+    return jsonResponse({ message: 'OTP verified successfully.', resetToken }, 200, request);
+  }
+
+  // 15. POST /api/auth/reset-password
+  if (routePath === 'auth/reset-password') {
+    const clientIp = getClientIp(request);
+    const rateCheck = checkRateLimit(clientIp, 'auth_reset_password', 5, 15 * 60 * 1000);
+    if (!rateCheck.allowed) {
+      return jsonResponse({ error: 'Too many attempts. Please wait before trying again.' }, 429, request);
+    }
+
+    const { resetToken, newPassword, confirmPassword } = body;
+    if (!resetToken || !newPassword || !confirmPassword) {
+      return jsonResponse({ error: 'All fields are required.' }, 400, request);
+    }
+
+    if (newPassword !== confirmPassword) {
+      return jsonResponse({ error: 'Passwords do not match.' }, 400, request);
+    }
+
+    let decoded = null;
+    try {
+      decoded = jwt.verify(resetToken, JWT_SECRET);
+    } catch (err) {
+      return jsonResponse({ error: 'This verification code has expired. Please request a new code.' }, 400, request);
+    }
+
+    if (!decoded || decoded.purpose !== 'password_reset' || !decoded.userId) {
+      return jsonResponse({ error: 'Invalid password reset token.' }, 400, request);
+    }
+
+    const policyResult = validatePasswordPolicy(newPassword);
+    if (!policyResult.valid) {
+      return jsonResponse({ error: policyResult.message }, 400, request);
+    }
+
+    await refreshTable('users');
+    const targetUser = db.users.find(u => u.id === decoded.userId);
+    if (!targetUser) {
+      return jsonResponse({ error: 'Account not found.' }, 404, request);
+    }
+
+    targetUser.password = await bcrypt.hash(newPassword, 10);
+    targetUser.mustChangePassword = false;
+
+    await supabaseClient.upsertRecord('users', targetUser);
+
+    return jsonResponse({ message: 'Your password has been changed successfully. You can now log in with your new password.' }, 200, request);
+  }
+
+  // 16. POST /api/auth/update-must-change-password
+  if (routePath === 'auth/update-must-change-password') {
+    if (!user) return jsonResponse({ error: 'Unauthorized' }, 401, request);
+
+    const { newPassword, confirmPassword } = body;
+    if (!newPassword || !confirmPassword) {
+      return jsonResponse({ error: 'New password and confirmation are required.' }, 400, request);
+    }
+
+    if (newPassword !== confirmPassword) {
+      return jsonResponse({ error: 'Passwords do not match.' }, 400, request);
+    }
+
+    const policyResult = validatePasswordPolicy(newPassword);
+    if (!policyResult.valid) {
+      return jsonResponse({ error: policyResult.message }, 400, request);
+    }
+
+    await refreshTable('users');
+    const targetUser = db.users.find(u => u.id === user.id);
+    if (!targetUser) return jsonResponse({ error: 'User not found.' }, 404, request);
+
+    targetUser.password = await bcrypt.hash(newPassword, 10);
+    targetUser.mustChangePassword = false;
+
+    await supabaseClient.upsertRecord('users', targetUser);
+    return jsonResponse({ message: 'Password changed successfully.' }, 200, request);
   }
 
   // 12. POST /api/settings
