@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -10,6 +10,22 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'
+  const [captchaChallenge, setCaptchaChallenge] = useState(null);
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
+
+  useEffect(() => {
+    fetchCaptcha();
+  }, []);
+
+  async function fetchCaptcha() {
+    try {
+      const res = await fetch('/api/auth/captcha');
+      if (res.ok) {
+        const data = await res.json();
+        setCaptchaChallenge(data);
+      }
+    } catch (e) {}
+  }
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -20,7 +36,11 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          captchaId: captchaChallenge?.captchaId,
+          captchaAnswer: captchaAnswer
+        }),
       });
       const data = await res.json();
 
@@ -34,6 +54,7 @@ export default function LoginPage() {
         }
       } else {
         setError(data.error || 'Login failed. Please try again.');
+        fetchCaptcha();
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -151,6 +172,35 @@ export default function LoginPage() {
             </label>
             <Link href="#" style={{ fontSize: 13, color: 'var(--secondary)', fontWeight: 600, textDecoration: 'none' }}>Forgot Password?</Link>
           </div>
+
+          {/* Security CAPTCHA Challenge */}
+          {captchaChallenge && (
+            <div style={{ marginBottom: 20, padding: 12, background: 'var(--accent, rgba(0,0,0,0.03))', borderRadius: 10, border: '1px solid var(--border)' }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <i className="fa-solid fa-shield-halved" style={{ color: 'var(--secondary, #C92A2A)' }} />
+                <span>{captchaChallenge.question}</span>
+              </label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="number"
+                  className="form-input"
+                  placeholder="Enter answer..."
+                  value={captchaAnswer}
+                  onChange={e => setCaptchaAnswer(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={fetchCaptcha}
+                  className="btn btn-outline"
+                  title="Refresh security challenge"
+                  style={{ padding: '8px 12px', fontSize: 12 }}
+                >
+                  <i className="fa-solid fa-arrows-rotate" />
+                </button>
+              </div>
+            </div>
+          )}
 
           <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: 15, borderRadius: 12 }}>
             {loading ? (

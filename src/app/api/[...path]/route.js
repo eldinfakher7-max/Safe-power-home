@@ -3,21 +3,36 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { db, initStore, refreshTable, seedUserTwelveDevices, verifyAuth, nextId, complaintId, JWT_SECRET, DEVICE_PASSWORD } from '@/lib/backendStore';
 import supabaseClient from '@/lib/supabase';
+import { getSecurityHeaders, sanitizeString, sanitizeUserObject, validateEmail, validatePasswordPolicy, createCaptchaChallenge, verifyCaptchaToken } from '@/lib/security';
+import { checkRateLimit } from '@/lib/rateLimiter';
 
-// Helper for JSON response with CORS headers
-function jsonResponse(data, status = 200) {
+// Helper for JSON response with Security Headers and CORS protection
+function jsonResponse(data, status = 200, req = null) {
+  const reqOrigin = req ? req.headers.get('origin') : null;
+  const allowedOrigin = process.env.ALLOWED_ORIGIN || (reqOrigin ? reqOrigin : '*');
+  const secHeaders = getSecurityHeaders();
+
   return NextResponse.json(data, {
     status,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': allowedOrigin,
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+      'Access-Control-Allow-Credentials': 'true',
+      ...secHeaders
     },
   });
 }
 
-export async function OPTIONS() {
-  return jsonResponse({}, 200);
+function getClientIp(req) {
+  if (!req) return '127.0.0.1';
+  const forwarded = req.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return req.headers.get('x-real-ip') || '127.0.0.1';
+}
+
+export async function OPTIONS(request) {
+  return jsonResponse({}, 200, request);
 }
 
 export async function GET(request, { params }) {
@@ -27,47 +42,61 @@ export async function GET(request, { params }) {
   const authHeader = request.headers.get('authorization');
   const user = verifyAuth(authHeader);
 
+  // 0. GET /api/auth/captcha (Public security challenge)
+  if (routePath === 'auth/captcha') {
+    return jsonResponse(createCaptchaChallenge(), 200, request);
+  }
+
   // 1. GET /api/devices
   if (routePath === 'devices') {
-    if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    if (!user) return jsonResponse({ error: 'Unauthorized' }, 401, request);
     await refreshTable('devices');
     let devices = user.userType === 'Admin' ? db.devices : db.devices.filter(d => d.userId === user.id);
     if (devices.length === 0) {
       devices = await seedUserTwelveDevices(user.id);
     }
-    return jsonResponse(devices);
+    return jsonResponse(devices, 200, request);
   }
 
   // 2. GET /api/notifications
   if (routePath === 'notifications') {
-    if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    if (!user) return jsonResponse({ error: 'Unauthorized' }, 401, request);
     await refreshTable('notifications');
     const userNotifs = user.userType === 'Admin' ? db.notifications : db.notifications.filter(n => n.userId === user.id);
-    return jsonResponse(userNotifs.slice().reverse().slice(0, 50));
+    return jsonResponse(userNotifs.slice().reverse().slice(0, 50), 200, request);
   }
 
   // 3. GET /api/alerts
   if (routePath === 'alerts') {
-    if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    if (!user) return jsonResponse({ error: 'Unauthorized' }, 401, request);
     await refreshTable('alerts');
     const userAlerts = user.userType === 'Admin' ? db.alerts : db.alerts.filter(a => !a.userId || a.userId === user.id);
-    return jsonResponse(userAlerts.slice().reverse());
+    return jsonResponse(userAlerts.slice().reverse(), 200, request);
   }
 
   // 4. GET /api/complaints
   if (routePath === 'complaints') {
-    if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    if (!user) return jsonResponse({ error: 'Unauthorized' }, 401, request);
     await refreshTable('complaints');
     const list = user.userType === 'Admin' ? db.complaints : db.complaints.filter(c => c.userId === user.id);
-    return jsonResponse(list.slice().reverse());
+    return jsonResponse(list.slice().reverse(), 200, request);
   }
 
   // 5. GET /api/complaints/:cid/messages
   if (pathSegments.length === 3 && pathSegments[0] === 'complaints' && pathSegments[2] === 'messages') {
-    if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    if (!user) return jsonResponse({ error: 'Unauthorized' }, 401, request);
     const cid = pathSegments[1];
+    
+    // Server-side authorization check (IDOR protection)
+    if (user.userType !== 'Admin') {
+      const complaint = db.complaints.find(c => c.complaintId === cid);
+      if (!complaint || complaint.userId !== user.id) {
+        return jsonResponse({ error: 'Access denied to ticket messages.' }, 403, request);
+      }
+    }
+
     const msgs = db.complaintMessages.filter(m => m.complaintId === cid);
-    return jsonResponse(msgs);
+    return jsonResponse(msgs, 200, request);
   }
 
   // 6. GET /api/admin/requests
@@ -140,39 +169,79 @@ export async function POST(request, { params }) {
 
   // 1. POST /api/auth/signup
   if (routePath === 'auth/signup') {
-    const { name, email, phone, password, userType, adminSecretKey } = body;
-    if (!name || !email || !password) return jsonResponse({ error: 'Name, email, and password are required.' }, 400);
+    const clientIp = getClientIp(request);
+    const rateCheck = checkRateLimit(clientIp, 'auth_signup', 10, 15 * 60 * 1000);
+    if (!rateCheck.allowed) {
+      return jsonResponse({ error: 'Too many registration attempts. Please try again in 15 minutes.' }, 429, request);
+    }
+
+    const { name, email, phone, password, userType, adminSecretKey, captchaId, captchaAnswer } = body;
+    
+    // Server-Side CAPTCHA Verification
+    if (captchaId && captchaAnswer) {
+      const isValidCaptcha = verifyCaptchaToken(captchaId, captchaAnswer);
+      if (!isValidCaptcha) {
+        return jsonResponse({ error: 'Security verification failed. Incorrect CAPTCHA answer.' }, 400, request);
+      }
+    }
+
+    if (!name || !email || !password) return jsonResponse({ error: 'Name, email, and password are required.' }, 400, request);
+    if (!validateEmail(email)) {
+      return jsonResponse({ error: 'Invalid email address format.' }, 400, request);
+    }
+
+    // SERVER-SIDE AUTHORITATIVE PASSWORD POLICY ENFORCEMENT
+    const passwordValidation = validatePasswordPolicy(password);
+    if (!passwordValidation.valid) {
+      return jsonResponse({ error: passwordValidation.message }, 400, request);
+    }
+
     if (userType === 'Admin' && adminSecretKey !== 'fakherkoky@2010') {
-      return jsonResponse({ error: 'Incorrect Admin Secret Password.' }, 403);
+      return jsonResponse({ error: 'Incorrect Admin Secret Password.' }, 403, request);
     }
     
-    const trimmedName = (name || '').trim();
+    const trimmedName = sanitizeString(name, 100);
     const trimmedEmail = (email || '').trim().toLowerCase();
     const cleanedPhone = (phone || '').replace(/\s+/g, '');
 
     if (db.users.some(u => (u.name || '').trim().toLowerCase() === trimmedName.toLowerCase())) {
-      return jsonResponse({ error: 'Username / Full Name is already taken.' }, 409);
+      return jsonResponse({ error: 'Username / Full Name is already taken.' }, 409, request);
     }
     if (db.users.some(u => (u.email || '').trim().toLowerCase() === trimmedEmail)) {
-      return jsonResponse({ error: 'Email address is already registered.' }, 409);
+      return jsonResponse({ error: 'Email address is already registered.' }, 409, request);
     }
     if (cleanedPhone && db.users.some(u => u.phone && u.phone.replace(/\s+/g, '') === cleanedPhone)) {
-      return jsonResponse({ error: 'Phone number is already registered.' }, 409);
+      return jsonResponse({ error: 'Phone number is already registered.' }, 409, request);
     }
 
-    const hashed = await bcrypt.hash(password, 6);
+    const hashed = await bcrypt.hash(password, 10);
     const newUser = { id: nextId('user'), name: trimmedName, email: trimmedEmail, phone: phone || '', password: hashed, userType: userType || 'User', status: 'Active', createdAt: new Date().toISOString() };
     db.users.push(newUser);
     
     // Explicitly await Supabase upsert to prevent Vercel Serverless function from terminating prematurely
     await supabaseClient.upsertRecord('users', newUser);
-    return jsonResponse({ message: 'Account created successfully.' });
+    return jsonResponse({ message: 'Account created successfully.' }, 200, request);
   }
 
   // 2. POST /api/auth/login
   if (routePath === 'auth/login') {
-    const { email, password } = body;
-    if (!email || !password) return jsonResponse({ error: 'Email/Username and Password are required.' }, 400);
+    const clientIp = getClientIp(request);
+    const rateCheck = checkRateLimit(clientIp, 'auth_login', 15, 15 * 60 * 1000);
+    if (!rateCheck.allowed) {
+      return jsonResponse({ error: 'Too many login attempts. Please try again in 15 minutes.' }, 429, request);
+    }
+
+    const { email, password, captchaId, captchaAnswer } = body;
+
+    // Optional CAPTCHA verification if provided
+    if (captchaId && captchaAnswer) {
+      const isValidCaptcha = verifyCaptchaToken(captchaId, captchaAnswer);
+      if (!isValidCaptcha) {
+        return jsonResponse({ error: 'Security verification failed. Incorrect CAPTCHA answer.' }, 400, request);
+      }
+    }
+
+    if (!email || !password) return jsonResponse({ error: 'Email/Username and Password are required.' }, 400, request);
 
     const rawInput = (email || '').trim();
     const normalizedInput = rawInput.toLowerCase();
@@ -212,11 +281,11 @@ export async function POST(request, { params }) {
         isAIAuthorized: true 
       };
       const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '24h' });
-      const { password: _, ...safeUser } = aiUser;
+      const safeUser = sanitizeUserObject(aiUser);
       return jsonResponse({ 
         token, 
         user: { ...safeUser, isAIAuthorized: true, redirectTo: '/chat' } 
-      });
+      }, 200, request);
     }
 
     // 2. Refresh users table from Supabase to ensure newly registered users are loaded
@@ -238,11 +307,11 @@ export async function POST(request, { params }) {
     });
 
     if (!existingUser) {
-      return jsonResponse({ error: 'Invalid email, username, or password.' }, 401);
+      return jsonResponse({ error: 'Invalid email, username, or password.' }, 401, request);
     }
 
     if (existingUser.status === 'Suspended') {
-      return jsonResponse({ error: 'Your account has been suspended. Contact administrator.' }, 403);
+      return jsonResponse({ error: 'Your account has been suspended. Contact administrator.' }, 403, request);
     }
 
     // 4. Verify Password (supports bcrypt hash or direct match)
@@ -263,7 +332,7 @@ export async function POST(request, { params }) {
     }
 
     if (!valid) {
-      return jsonResponse({ error: 'Invalid password.' }, 401);
+      return jsonResponse({ error: 'Invalid password.' }, 401, request);
     }
 
     // Determine if this user is the dedicated AI account
@@ -281,27 +350,33 @@ export async function POST(request, { params }) {
       isAIAuthorized: isAI 
     };
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '24h' });
-    const { password: _, ...safeUser } = existingUser;
+    const safeUser = sanitizeUserObject(existingUser);
 
     return jsonResponse({ 
       token, 
       user: { ...safeUser, isAIAuthorized: isAI, redirectTo: isAI ? '/chat' : '/dashboard' } 
-    });
+    }, 200, request);
   }
 
   // 3. POST /api/ai/chat — Exclusive AI Endpoint (Server-Side Protection)
   if (routePath === 'ai/chat') {
-    if (!user) return jsonResponse({ error: 'Unauthorized. Please log in.' }, 401);
+    const clientIp = getClientIp(request);
+    const rateCheck = checkRateLimit(clientIp, 'ai_chat', 30, 60 * 1000);
+    if (!rateCheck.allowed) {
+      return jsonResponse({ error: 'Rate limit exceeded. Please wait a moment before sending another message.' }, 429, request);
+    }
+
+    if (!user) return jsonResponse({ error: 'Unauthorized. Please log in.' }, 401, request);
 
     // STRICT SERVER-SIDE AUTHORIZATION CHECK: Only the dedicated AI account is allowed
     if (!user.isAIAuthorized) {
       return jsonResponse({ 
         error: 'AI Access Denied. Only the dedicated AI account (eyadfakherahmed) is authorized to access AI Chat.' 
-      }, 403);
+      }, 403, request);
     }
 
     const { prompt, history } = body;
-    if (!prompt) return jsonResponse({ error: 'Prompt is required' }, 400);
+    if (!prompt) return jsonResponse({ error: 'Prompt is required' }, 400, request);
 
     try {
       const systemContext = `You are Safe Power AI, a World-Class Competitive Programmer, C++ Problem Solving Grandmaster, and Electrical/Energy Engineering AI Assistant.

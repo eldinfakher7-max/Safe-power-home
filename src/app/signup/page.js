@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -18,8 +18,32 @@ export default function SignupPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [captchaChallenge, setCaptchaChallenge] = useState(null);
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
 
   const ADMIN_SECRET = 'fakherkoky@2010';
+
+  useEffect(() => {
+    fetchCaptcha();
+  }, []);
+
+  async function fetchCaptcha() {
+    try {
+      const res = await fetch('/api/auth/captcha');
+      if (res.ok) {
+        const data = await res.json();
+        setCaptchaChallenge(data);
+      }
+    } catch (e) {}
+  }
+
+  function validatePasswordPolicy(pass) {
+    if (!pass || pass.length < 8) return 'Password must be at least 8 characters long.';
+    if (!/[A-Z]/.test(pass)) return 'Password must contain at least one uppercase letter (A-Z).';
+    if (!/[a-z]/.test(pass)) return 'Password must contain at least one lowercase letter (a-z).';
+    if (!/[0-9]/.test(pass)) return 'Password must contain at least one number (0-9).';
+    return null;
+  }
 
   async function handleSignup(e) {
     e.preventDefault();
@@ -29,10 +53,18 @@ export default function SignupPage() {
       setError('Passwords do not match.');
       return;
     }
-    if (form.password.length < 6) {
-      setError('Password must be at least 6 characters.');
+
+    const passError = validatePasswordPolicy(form.password);
+    if (passError) {
+      setError(passError);
       return;
     }
+
+    if (captchaChallenge && !captchaAnswer) {
+      setError('Please complete the security CAPTCHA verification.');
+      return;
+    }
+
     if (form.userType === 'Admin' && form.adminSecretKey !== ADMIN_SECRET) {
       setError('Incorrect Admin Secret Password. You cannot register as System Administrator.');
       return;
@@ -44,7 +76,11 @@ export default function SignupPage() {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          captchaId: captchaChallenge?.captchaId,
+          captchaAnswer: captchaAnswer
+        }),
       });
       const data = await res.json();
 
@@ -53,6 +89,7 @@ export default function SignupPage() {
         setTimeout(() => router.push('/login'), 2000);
       } else {
         setError(data.error || 'Registration failed.');
+        fetchCaptcha();
       }
     } catch (err) {
       setError('Connection error. Please check your network.');
@@ -143,6 +180,35 @@ export default function SignupPage() {
               <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginTop: 4 }}>
                 Secret authorization password is required to create a System Administrator account.
               </span>
+            </div>
+          )}
+
+          {/* Security CAPTCHA Challenge */}
+          {captchaChallenge && (
+            <div style={{ marginBottom: 18, padding: 12, background: 'var(--accent, rgba(0,0,0,0.03))', borderRadius: 10, border: '1px solid var(--border)' }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <i className="fa-solid fa-shield-halved" style={{ color: 'var(--secondary, #C92A2A)' }} />
+                <span>{captchaChallenge.question}</span>
+              </label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="number"
+                  className="form-input"
+                  placeholder="Enter answer..."
+                  value={captchaAnswer}
+                  onChange={e => setCaptchaAnswer(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={fetchCaptcha}
+                  className="btn btn-outline"
+                  title="Refresh security challenge"
+                  style={{ padding: '8px 12px', fontSize: 12 }}
+                >
+                  <i className="fa-solid fa-arrows-rotate" />
+                </button>
+              </div>
             </div>
           )}
 

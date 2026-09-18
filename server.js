@@ -230,8 +230,35 @@ app.prepare().then(async () => {
   const io = new Server(server, { cors: { origin: '*' } });
 
   const cors = require('cors');
-  expressApp.use(cors());
-  expressApp.use(express.json());
+  const allowedOrigin = process.env.ALLOWED_ORIGIN || '*';
+  expressApp.use(cors({ origin: allowedOrigin, credentials: true }));
+  expressApp.use(express.json({ limit: '1mb' }));
+
+  // Security Headers Middleware
+  expressApp.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+    next();
+  });
+
+  // Block Directory Listing & Sensitive File Exposure (.env, .git, config files, etc.)
+  expressApp.use((req, res, next) => {
+    const url = req.url.toLowerCase();
+    if (
+      url.includes('.env') ||
+      url.includes('.git') ||
+      url.includes('package.json') ||
+      url.includes('node_modules') ||
+      url.includes('server.js') ||
+      url.includes('supabase_schema.sql')
+    ) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
+    next();
+  });
 
   // ──────────────────────────────────────────
   //  SOCKET.IO
