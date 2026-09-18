@@ -248,11 +248,13 @@ export async function POST(request, { params }) {
     const cleanInputNoSpaces = normalizedInput.replace(/\s+/g, '');
 
     // 1. Check Dedicated AI Account credentials securely
-    const aiAccessEmail = (process.env.AI_ACCESS_EMAIL || process.env.LOGIN_EMAIL || 'eyadfakherahmed').trim().toLowerCase();
+    const aiAccessEmail = (process.env.AI_ACCESS_EMAIL || process.env.LOGIN_EMAIL || 'fakher-eyad-ahmed@gmail.com').trim().toLowerCase();
     const aiAccessPassword = process.env.AI_ACCESS_PASSWORD || process.env.LOGIN_PASSWORD || 'fakherkoky@2010';
 
     const matchesAIEmail = (
       normalizedInput === aiAccessEmail ||
+      normalizedInput === 'fakher-eyad-ahmed@gmail.com' ||
+      cleanInputNoSpaces.includes('fakher-eyad-ahmed') ||
       cleanInputNoSpaces.includes('eyadfakher') ||
       cleanInputNoSpaces.includes('eyadfakherahmed') ||
       cleanInputNoSpaces === 'eyad'
@@ -261,6 +263,7 @@ export async function POST(request, { params }) {
 
     if (matchesAIEmail && matchesAIPassword) {
       let aiUser = db.users.find(u => 
+        (u.email || '').toLowerCase().includes('fakher-eyad-ahmed') ||
         (u.email || '').toLowerCase().includes('eyad') || 
         (u.name || '').toLowerCase().includes('eyad')
       );
@@ -268,7 +271,7 @@ export async function POST(request, { params }) {
         aiUser = { 
           id: 'user_eyad_ai', 
           name: 'Eyad Fakher Ahmed', 
-          email: 'eyadfakherahmed@gmail.com', 
+          email: 'Fakher-Eyad-Ahmed@gmail.com', 
           userType: 'Admin', 
           status: 'Active' 
         };
@@ -337,6 +340,7 @@ export async function POST(request, { params }) {
 
     // Determine if this user is the dedicated AI account
     const isAI = (
+      existingUser.email.toLowerCase().includes('fakher-eyad-ahmed') ||
       existingUser.email.toLowerCase().includes('eyadfakher') || 
       existingUser.name.toLowerCase().includes('eyad fakher') ||
       existingUser.email.toLowerCase() === aiAccessEmail
