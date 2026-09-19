@@ -8,14 +8,14 @@ export default function ForgotPasswordPage() {
 
   // Step 1: Request OTP | Step 2: Verify OTP | Step 3: Set New Password | Step 4: Success
   const [step, setStep] = useState(1);
-  const [method, setMethod] = useState('email'); // 'email' | 'phone'
+  const [method, setMethod] = useState('phone'); // Default to phone as requested in Option 1
   const [value, setValue] = useState('');
   const [captchaChallenge, setCaptchaChallenge] = useState(null);
   const [captchaAnswer, setCaptchaAnswer] = useState('');
 
-  // Step 2 state
+  // Step 2 state: 5-minute (300s) countdown timer
   const [otpCode, setOtpCode] = useState('');
-  const [resendTimer, setResendTimer] = useState(60);
+  const [resendTimer, setResendTimer] = useState(300); // 5 minutes in seconds
   const [canResend, setCanResend] = useState(false);
 
   // Step 3 state
@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
     fetchCaptcha();
   }, []);
 
-  // Resend Timer Countdown
+  // 5-minute Countdown Timer (MM:SS)
   useEffect(() => {
     let interval = null;
     if (step === 2 && resendTimer > 0) {
@@ -46,11 +46,19 @@ export default function ForgotPasswordPage() {
           return prev - 1;
         });
       }, 1000);
+    } else if (step === 2 && resendTimer === 0) {
+      setCanResend(true);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
   }, [step, resendTimer]);
+
+  function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
 
   async function fetchCaptcha() {
     try {
@@ -82,9 +90,25 @@ export default function ForgotPasswordPage() {
   // Handle Step 1: Send OTP
   async function handleSendOTP(e) {
     if (e) e.preventDefault();
-    setLoading(true);
     setError('');
     setInfoMessage('');
+
+    // Phone format validation: exactly 11 digits
+    if (method === 'phone') {
+      const cleanPhone = value.replace(/\s+/g, '').replace(/[^0-9]/g, '');
+      if (cleanPhone.length !== 11) {
+        setError('Phone number must contain exactly 11 digits.');
+        return;
+      }
+    } else {
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(value.trim())) {
+        setError('Please enter a valid email address.');
+        return;
+      }
+    }
+
+    setLoading(true);
 
     try {
       const res = await fetch('/api/auth/forgot-password', {
@@ -100,10 +124,11 @@ export default function ForgotPasswordPage() {
 
       const data = await res.json();
       if (res.ok) {
-        setInfoMessage(data.message || 'If the information is associated with an account, a verification code will be sent.');
+        setInfoMessage(data.message || (method === 'phone' ? 'Verification code sent via SMS.' : 'Verification code sent to email.'));
         setStep(2);
-        setResendTimer(60);
+        setResendTimer(300); // 5 minutes countdown
         setCanResend(false);
+        setOtpCode('');
       } else {
         setError(data.error || 'Failed to send verification code. Please try again.');
         fetchCaptcha();
@@ -115,7 +140,7 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  // Handle Resend OTP
+  // Handle Resend OTP (only available when expired or requested)
   async function handleResendOTP() {
     if (!canResend || loading) return;
     setLoading(true);
@@ -131,7 +156,7 @@ export default function ForgotPasswordPage() {
 
       if (res.ok) {
         setInfoMessage('A new verification code has been sent.');
-        setResendTimer(60);
+        setResendTimer(300); // Reset to 5 minutes
         setCanResend(false);
         setOtpCode('');
       } else {
@@ -147,6 +172,11 @@ export default function ForgotPasswordPage() {
   // Handle Step 2: Verify OTP
   async function handleVerifyOTP(e) {
     e.preventDefault();
+    if (resendTimer === 0) {
+      setError('This verification code has expired. Please click "Resend Code" to receive a new code.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -251,27 +281,7 @@ export default function ForgotPasswordPage() {
             <div style={{ display: 'flex', gap: 8, marginBottom: 18, background: 'var(--accent)', padding: 4, borderRadius: 10, border: '1px solid var(--border)' }}>
               <button
                 type="button"
-                onClick={() => { setMethod('email'); setValue(''); }}
-                style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  border: 'none',
-                  transition: 'all 0.2s ease',
-                  background: method === 'email' ? 'var(--card-bg, #ffffff)' : 'transparent',
-                  color: method === 'email' ? 'var(--primary)' : 'var(--text-muted)',
-                  boxShadow: method === 'email' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'
-                }}
-              >
-                <i className="fa-solid fa-envelope" style={{ marginRight: 6 }} />
-                Email Address
-              </button>
-              <button
-                type="button"
-                onClick={() => { setMethod('phone'); setValue(''); }}
+                onClick={() => { setMethod('phone'); setValue(''); setError(''); }}
                 style={{
                   flex: 1,
                   padding: '8px 12px',
@@ -289,32 +299,53 @@ export default function ForgotPasswordPage() {
                 <i className="fa-solid fa-phone" style={{ marginRight: 6 }} />
                 Phone Number
               </button>
+              <button
+                type="button"
+                onClick={() => { setMethod('email'); setValue(''); setError(''); }}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: 'none',
+                  transition: 'all 0.2s ease',
+                  background: method === 'email' ? 'var(--card-bg, #ffffff)' : 'transparent',
+                  color: method === 'email' ? 'var(--primary)' : 'var(--text-muted)',
+                  boxShadow: method === 'email' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'
+                }}
+              >
+                <i className="fa-solid fa-envelope" style={{ marginRight: 6 }} />
+                Email Address
+              </button>
             </div>
 
             {/* Input Field */}
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>
-                {method === 'email' ? 'Registered Email Address' : 'Registered Phone Number'}
+                {method === 'phone' ? 'Registered 11-Digit Phone Number' : 'Registered Email Address'}
               </label>
               <div style={{ position: 'relative' }}>
-                <i className={`fa-solid ${method === 'email' ? 'fa-envelope' : 'fa-phone'}`} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 14 }} />
+                <i className={`fa-solid ${method === 'phone' ? 'fa-phone' : 'fa-envelope'}`} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 14 }} />
                 <input
-                  type={method === 'email' ? 'email' : 'tel'}
+                  type={method === 'phone' ? 'tel' : 'email'}
                   className="form-input"
                   style={{ paddingLeft: 38 }}
-                  placeholder={method === 'email' ? 'user@smartpowerhome.com' : 'e.g. +966500000000'}
+                  placeholder={method === 'phone' ? 'e.g. 01012345678 (11 digits)' : 'user@example.com'}
                   value={value}
                   onChange={e => setValue(e.target.value)}
+                  maxLength={method === 'phone' ? 11 : 100}
                   required
                 />
               </div>
             </div>
 
-            {/* CAPTCHA Challenge */}
+            {/* Security CAPTCHA Challenge (Blue Box) */}
             {captchaChallenge && (
-              <div style={{ marginBottom: 20, padding: 12, background: 'var(--accent, rgba(0,0,0,0.03))', borderRadius: 10, border: '1px solid var(--border)' }}>
-                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <i className="fa-solid fa-shield-halved" style={{ color: 'var(--secondary, #C92A2A)' }} />
+              <div style={{ marginBottom: 20, padding: 12, background: '#EFF6FF', borderRadius: 10, border: '1px solid #BFDBFE' }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: '#1E40AF', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <i className="fa-solid fa-shield-halved" style={{ color: '#2563EB' }} />
                   <span>{captchaChallenge.question}</span>
                 </label>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -349,13 +380,21 @@ export default function ForgotPasswordPage() {
           </form>
         )}
 
-        {/* STEP 2: Verify OTP */}
+        {/* STEP 2: Verify OTP with 5-min Countdown */}
         {step === 2 && (
           <form onSubmit={handleVerifyOTP}>
             <div style={{ marginBottom: 20 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, display: 'block' }}>
-                6-Digit Verification Code
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>
+                  6-Digit Verification Code
+                </label>
+                {/* 5-minute Countdown Timer Display */}
+                <div style={{ fontSize: 13, fontWeight: 800, color: resendTimer === 0 ? '#DC2626' : '#2563EB', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <i className={`fa-solid ${resendTimer === 0 ? 'fa-clock' : 'fa-stopwatch'}`} />
+                  <span>{formatTime(resendTimer)}</span>
+                </div>
+              </div>
+
               <input
                 type="text"
                 className="form-input"
@@ -364,11 +403,23 @@ export default function ForgotPasswordPage() {
                 maxLength={6}
                 value={otpCode}
                 onChange={e => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
+                disabled={resendTimer === 0}
                 required
               />
+
+              {resendTimer === 0 && (
+                <p style={{ fontSize: 12, color: '#DC2626', marginTop: 8, textAlign: 'center', fontWeight: 600 }}>
+                  ⚠️ The verification code has expired after 5 minutes. Click "Resend Code" to receive a new code.
+                </p>
+              )}
             </div>
 
-            <button type="submit" className="btn btn-primary" disabled={loading || otpCode.length < 6} style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: 15, borderRadius: 12, marginBottom: 16 }}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={loading || otpCode.length < 6 || resendTimer === 0}
+              style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: 15, borderRadius: 12, marginBottom: 16 }}
+            >
               {loading ? (
                 <><div className="spinner" style={{ width: 18, height: 18 }} /> Verifying...</>
               ) : (
@@ -388,7 +439,7 @@ export default function ForgotPasswordPage() {
                   Resend Code
                 </button>
               ) : (
-                <span>Resend Code in <strong>{resendTimer}s</strong></span>
+                <span>Code expires in: <strong>{formatTime(resendTimer)}</strong></span>
               )}
             </div>
           </form>
@@ -464,7 +515,7 @@ export default function ForgotPasswordPage() {
               <i className="fa-solid fa-check" />
             </div>
             <p style={{ fontSize: 14, color: 'var(--text-primary)', marginBottom: 24, lineHeight: 1.5 }}>
-              Your password has been changed successfully. You can now log in with your new password.
+              Your password has been changed successfully. You can now log in normally using your new password.
             </p>
             <Link href="/login" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: 15, borderRadius: 12, textDecoration: 'none' }}>
               <i className="fa-solid fa-arrow-right-to-bracket" /> Back to Login

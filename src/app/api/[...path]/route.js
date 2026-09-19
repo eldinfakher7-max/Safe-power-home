@@ -620,18 +620,54 @@ You also assist with energy management, appliance safety, and general programmin
     return jsonResponse(reqItem);
   }
 
-  // 11. POST /api/admin/users/:id/reset-password
+  // 11a. POST /api/admin/verify-access
+  if (routePath === 'admin/verify-access') {
+    if (!user || user.userType !== 'Admin') {
+      return jsonResponse({ error: 'Access Denied. Admin privileges required.' }, 403, request);
+    }
+
+    const { adminVerificationPassword } = body;
+    const expectedAdminPassword = process.env.ADMIN_VERIFICATION_PASSWORD || process.env.LOGIN_PASSWORD || 'fakherkoky@2010';
+    if (!adminVerificationPassword || adminVerificationPassword !== expectedAdminPassword) {
+      return jsonResponse({ error: 'Invalid admin verification password.' }, 400, request);
+    }
+
+    const adminPassSessionToken = jwt.sign(
+      { adminId: user.id, scope: 'admin_password_management' },
+      JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    return jsonResponse({ message: 'Admin verification successful.', adminPassSessionToken }, 200, request);
+  }
+
+  // 11b. POST /api/admin/users/:id/reset-password
   if (pathSegments.length === 4 && pathSegments[0] === 'admin' && pathSegments[1] === 'users' && pathSegments[3] === 'reset-password') {
     if (!user || user.userType !== 'Admin') {
       return jsonResponse({ error: 'Access Denied. Admin privileges required.' }, 403, request);
     }
 
-    const { adminVerificationPassword, newPassword, confirmPassword } = body;
+    const { adminVerificationPassword, adminPassSessionToken, newPassword, confirmPassword } = body;
 
-    // Strict Backend Admin Verification Password check
+    // Strict Backend Admin Verification Password check (direct password or verified management session)
     const expectedAdminPassword = process.env.ADMIN_VERIFICATION_PASSWORD || process.env.LOGIN_PASSWORD || 'fakherkoky@2010';
-    if (!adminVerificationPassword || adminVerificationPassword !== expectedAdminPassword) {
-      return jsonResponse({ error: 'Invalid admin verification password.' }, 400, request);
+    let isAuthorized = false;
+
+    if (adminVerificationPassword && adminVerificationPassword === expectedAdminPassword) {
+      isAuthorized = true;
+    } else if (adminPassSessionToken) {
+      try {
+        const decoded = jwt.verify(adminPassSessionToken, JWT_SECRET);
+        if (decoded && decoded.scope === 'admin_password_management' && decoded.adminId === user.id) {
+          isAuthorized = true;
+        }
+      } catch (err) {
+        isAuthorized = false;
+      }
+    }
+
+    if (!isAuthorized) {
+      return jsonResponse({ error: 'Invalid or expired admin verification.' }, 400, request);
     }
 
     if (!newPassword || !confirmPassword) {
@@ -654,7 +690,7 @@ You also assist with energy management, appliance safety, and general programmin
     }
 
     targetUser.password = await bcrypt.hash(newPassword, 10);
-    targetUser.mustChangePassword = true;
+    targetUser.mustChangePassword = false;
 
     await supabaseClient.upsertRecord('users', targetUser);
 
@@ -671,7 +707,7 @@ You also assist with energy management, appliance safety, and general programmin
     db.logs.push(auditLog);
     await supabaseClient.upsertRecord('logs', auditLog);
 
-    return jsonResponse({ message: 'User password reset successfully. User must change password on next login.' }, 200, request);
+    return jsonResponse({ message: 'User password updated successfully. The user can now log in normally using the new password.' }, 200, request);
   }
 
   // 12. POST /api/admin/users/:id/status
@@ -704,51 +740,63 @@ You also assist with energy management, appliance safety, and general programmin
       return jsonResponse({ error: 'Email address or Phone number is required.' }, 400, request);
     }
 
-    const genericMsg = 'If the information is associated with an account, a verification code will be sent.';
+    if (method === 'phone') {
+      const cleanPhone = value.replace(/\s+/g, '').replace(/[^0-9]/g, '');
+      if (cleanPhone.length !== 11) {
+        return jsonResponse({ error: 'Phone number must contain exactly 11 digits.' }, 400, request);
+      }
+    } else {
+      if (!validateEmail(value)) {
+        return jsonResponse({ error: 'Please enter a valid email address.' }, 400, request);
+      }
+    }
 
     await refreshTable('users');
 
     let matchedUser = null;
     if (method === 'phone') {
-      const cleanPhone = value.replace(/\s+/g, '');
-      matchedUser = db.users.find(u => u.phone && u.phone.replace(/\s+/g, '') === cleanPhone);
+      const cleanPhone = value.replace(/\s+/g, '').replace(/[^0-9]/g, '');
+      matchedUser = db.users.find(u => u.phone && u.phone.replace(/\s+/g, '').replace(/[^0-9]/g, '') === cleanPhone);
     } else {
       const normEmail = value.trim().toLowerCase();
       matchedUser = db.users.find(u => (u.email || '').trim().toLowerCase() === normEmail);
     }
 
-    if (matchedUser) {
-      if (!Array.isArray(db.passwordResets)) db.passwordResets = [];
-
-      // Invalidate existing active resets for this user
-      db.passwordResets.forEach(r => {
-        if (r.userId === matchedUser.id && !r.used) {
-          r.used = true;
-        }
-      });
-
-      // Generate secure 6-digit OTP
-      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-      const codeHash = await bcrypt.hash(otpCode, 10);
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-
-      const resetRecord = {
-        id: nextId('pr'),
-        userId: matchedUser.id,
-        channel: method || 'email',
-        codeHash,
-        expiresAt,
-        attempts: 0,
-        used: false,
-        createdAt: new Date().toISOString()
-      };
-
-      db.passwordResets.push(resetRecord);
-      await supabaseClient.upsertRecord('passwordResets', resetRecord);
+    if (!matchedUser) {
+      return jsonResponse({ error: 'No account was found associated with this information. Please check and try again.' }, 404, request);
     }
 
-    // Always return generic message to prevent account enumeration
-    return jsonResponse({ message: genericMsg }, 200, request);
+    if (!Array.isArray(db.passwordResets)) db.passwordResets = [];
+
+    // Invalidate existing active resets for this user
+    db.passwordResets.forEach(r => {
+      if (r.userId === matchedUser.id && !r.used) {
+        r.used = true;
+      }
+    });
+
+    // Generate secure 6-digit OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const codeHash = await bcrypt.hash(otpCode, 10);
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+    const resetRecord = {
+      id: nextId('pr'),
+      userId: matchedUser.id,
+      channel: method || 'email',
+      codeHash,
+      expiresAt,
+      attempts: 0,
+      used: false,
+      createdAt: new Date().toISOString()
+    };
+
+    db.passwordResets.push(resetRecord);
+    await supabaseClient.upsertRecord('passwordResets', resetRecord);
+
+    console.log(`[SMS/Email Dispatcher] Verification code sent to ${method === 'phone' ? matchedUser.phone : matchedUser.email}: ${otpCode}`);
+
+    return jsonResponse({ message: 'Verification code sent successfully.' }, 200, request);
   }
 
   // 14. POST /api/auth/verify-otp

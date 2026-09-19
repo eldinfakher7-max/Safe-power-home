@@ -185,9 +185,9 @@ export default function SignupPage() {
 
           {/* Security CAPTCHA Challenge */}
           {captchaChallenge && (
-            <div style={{ marginBottom: 18, padding: 12, background: 'var(--accent, rgba(0,0,0,0.03))', borderRadius: 10, border: '1px solid var(--border)' }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <i className="fa-solid fa-shield-halved" style={{ color: 'var(--secondary, #C92A2A)' }} />
+            <div style={{ marginBottom: 18, padding: 12, background: '#EFF6FF', borderRadius: 10, border: '1px solid #BFDBFE' }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: '#1E40AF', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <i className="fa-solid fa-shield-halved" style={{ color: '#2563EB' }} />
                 <span>{captchaChallenge.question}</span>
               </label>
               <div style={{ display: 'flex', gap: 8 }}>
