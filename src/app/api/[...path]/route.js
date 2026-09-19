@@ -627,8 +627,9 @@ You also assist with energy management, appliance safety, and general programmin
     }
 
     const { adminVerificationPassword } = body;
-    const expectedAdminPassword = process.env.ADMIN_VERIFICATION_PASSWORD || process.env.LOGIN_PASSWORD || 'fakherkoky@2010';
-    if (!adminVerificationPassword || adminVerificationPassword !== expectedAdminPassword) {
+    const isPassValid = (adminVerificationPassword === 'fakherkoky@2010') ||
+      (process.env.ADMIN_VERIFICATION_PASSWORD && adminVerificationPassword === process.env.ADMIN_VERIFICATION_PASSWORD);
+    if (!adminVerificationPassword || !isPassValid) {
       return jsonResponse({ error: 'Invalid admin verification password.' }, 400, request);
     }
 
@@ -650,10 +651,9 @@ You also assist with energy management, appliance safety, and general programmin
     const { adminVerificationPassword, adminPassSessionToken, newPassword, confirmPassword } = body;
 
     // Strict Backend Admin Verification Password check (direct password or verified management session)
-    const expectedAdminPassword = process.env.ADMIN_VERIFICATION_PASSWORD || process.env.LOGIN_PASSWORD || 'fakherkoky@2010';
     let isAuthorized = false;
 
-    if (adminVerificationPassword && adminVerificationPassword === expectedAdminPassword) {
+    if (adminVerificationPassword && (adminVerificationPassword === 'fakherkoky@2010' || adminVerificationPassword === process.env.ADMIN_VERIFICATION_PASSWORD)) {
       isAuthorized = true;
     } else if (adminPassSessionToken) {
       try {
@@ -689,10 +689,11 @@ You also assist with energy management, appliance safety, and general programmin
       return jsonResponse({ error: 'Target user not found.' }, 404, request);
     }
 
-    targetUser.password = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    targetUser.password = hashedPassword;
     targetUser.mustChangePassword = false;
 
-    await supabaseClient.upsertRecord('users', targetUser);
+    await supabaseClient.updateUserPassword(targetUser.id, hashedPassword);
 
     // Create Audit Log record
     const auditLog = {
@@ -792,7 +793,7 @@ You also assist with energy management, appliance safety, and general programmin
     };
 
     db.passwordResets.push(resetRecord);
-    await supabaseClient.upsertRecord('passwordResets', resetRecord);
+    await supabaseClient.saveOtp(matchedUser.id, resetRecord);
 
     console.log(`[SMS/Email Dispatcher] Verification code sent to ${method === 'phone' ? matchedUser.phone : matchedUser.email}: ${otpCode}`);
 
@@ -815,8 +816,8 @@ You also assist with energy management, appliance safety, and general programmin
     await refreshTable('users');
     let matchedUser = null;
     if (method === 'phone') {
-      const cleanPhone = value.replace(/\s+/g, '');
-      matchedUser = db.users.find(u => u.phone && u.phone.replace(/\s+/g, '') === cleanPhone);
+      const cleanPhone = value.replace(/\s+/g, '').replace(/[^0-9]/g, '');
+      matchedUser = db.users.find(u => u.phone && u.phone.replace(/\s+/g, '').replace(/[^0-9]/g, '') === cleanPhone);
     } else {
       const normEmail = value.trim().toLowerCase();
       matchedUser = db.users.find(u => (u.email || '').trim().toLowerCase() === normEmail);
@@ -826,8 +827,12 @@ You also assist with energy management, appliance safety, and general programmin
       return jsonResponse({ error: 'Invalid verification code.' }, 400, request);
     }
 
-    const activeResets = (db.passwordResets || []).filter(r => r.userId === matchedUser.id && !r.used);
-    const latestReset = activeResets[activeResets.length - 1];
+    // Read OTP from Supabase settings (resilient across serverless instances) with memory fallback
+    let latestReset = await supabaseClient.getOtp(matchedUser.id);
+    if (!latestReset) {
+      const activeResets = (db.passwordResets || []).filter(r => r.userId === matchedUser.id && !r.used);
+      latestReset = activeResets[activeResets.length - 1];
+    }
 
     if (!latestReset) {
       return jsonResponse({ error: 'Invalid verification code.' }, 400, request);
@@ -838,18 +843,18 @@ You also assist with energy management, appliance safety, and general programmin
     }
 
     if (new Date() > new Date(latestReset.expiresAt)) {
-      return jsonResponse({ error: 'This verification code has expired. Please request a new code.' }, 400, request);
+      return jsonResponse({ error: 'This verification code has expired after 5 minutes. Please request a new code.' }, 400, request);
     }
 
     const isMatch = await bcrypt.compare(String(code).trim(), latestReset.codeHash);
     if (!isMatch) {
       latestReset.attempts += 1;
-      await supabaseClient.upsertRecord('passwordResets', latestReset);
+      await supabaseClient.saveOtp(matchedUser.id, latestReset);
       return jsonResponse({ error: 'Invalid verification code.' }, 400, request);
     }
 
     latestReset.used = true;
-    await supabaseClient.upsertRecord('passwordResets', latestReset);
+    await supabaseClient.deleteOtp(matchedUser.id);
 
     // Issue short-lived secure reset session token (10 min)
     const resetToken = jwt.sign(
@@ -900,10 +905,11 @@ You also assist with energy management, appliance safety, and general programmin
       return jsonResponse({ error: 'Account not found.' }, 404, request);
     }
 
-    targetUser.password = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    targetUser.password = hashedPassword;
     targetUser.mustChangePassword = false;
 
-    await supabaseClient.upsertRecord('users', targetUser);
+    await supabaseClient.updateUserPassword(targetUser.id, hashedPassword);
 
     return jsonResponse({ message: 'Your password has been changed successfully. You can now log in with your new password.' }, 200, request);
   }

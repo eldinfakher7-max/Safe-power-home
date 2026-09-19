@@ -49,7 +49,13 @@ module.exports = {
   upsertRecord: async (tableName, record) => {
     if (!isConfigured) return;
     try {
-      const cleanRecord = { ...record };
+      let cleanRecord = { ...record };
+      if (tableName === 'users') {
+        const allowed = ['id', 'name', 'email', 'phone', 'password', 'userType', 'status', 'createdAt'];
+        const sanitized = {};
+        allowed.forEach(k => { if (cleanRecord[k] !== undefined) sanitized[k] = cleanRecord[k]; });
+        cleanRecord = sanitized;
+      }
       const { error } = await supabase.from(tableName).upsert(cleanRecord);
       if (error) {
         console.error(`Supabase error upserting to ${tableName}:`, error.message);
@@ -84,6 +90,54 @@ module.exports = {
       }
     } catch (err) {
       console.error(`Network error deleting from ${tableName}:`, err.message);
+    }
+  },
+
+  // Direct OTP and password helpers for Serverless / Supabase resilience
+  saveOtp: async (userId, otpRecord) => {
+    if (!isConfigured) return;
+    try {
+      await supabase.from('settings').upsert({
+        key: 'otp_' + userId,
+        value: JSON.stringify(otpRecord)
+      });
+    } catch (err) {
+      console.error('Error saving OTP to Supabase settings:', err.message);
+    }
+  },
+
+  getOtp: async (userId) => {
+    if (!isConfigured) return null;
+    try {
+      const { data, error } = await supabase.from('settings').select('value').eq('key', 'otp_' + userId);
+      if (error || !data || data.length === 0) return null;
+      return JSON.parse(data[0].value);
+    } catch (err) {
+      console.error('Error reading OTP from Supabase settings:', err.message);
+      return null;
+    }
+  },
+
+  deleteOtp: async (userId) => {
+    if (!isConfigured) return;
+    try {
+      await supabase.from('settings').delete().eq('key', 'otp_' + userId);
+    } catch (err) {
+      console.error('Error deleting OTP from Supabase settings:', err.message);
+    }
+  },
+
+  updateUserPassword: async (userId, hashedPassword) => {
+    if (!isConfigured) return;
+    try {
+      const { error } = await supabase.from('users').update({ password: hashedPassword }).eq('id', userId);
+      if (error) {
+        console.error('Error updating password in Supabase:', error.message);
+      } else {
+        console.log(`✅ Successfully updated password for user ${userId} in Supabase`);
+      }
+    } catch (err) {
+      console.error('Network error updating password in Supabase:', err.message);
     }
   }
 };

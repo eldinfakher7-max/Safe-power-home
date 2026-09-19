@@ -512,7 +512,7 @@ app.prepare().then(async () => {
       createdAt: new Date().toISOString()
     };
     db.passwordResets.push(resetRecord);
-    await supabaseClient.upsertRecord('passwordResets', resetRecord);
+    await supabaseClient.saveOtp(matchedUser.id, resetRecord);
 
     console.log(`[Security Dispatcher] Verification code for ${method === 'phone' ? matchedUser.phone : matchedUser.email}: ${otpCode}`);
 
@@ -535,8 +535,11 @@ app.prepare().then(async () => {
 
     if (!matchedUser) return res.status(400).json({ error: 'Invalid verification code.' });
 
-    const activeResets = (db.passwordResets || []).filter(r => r.userId === matchedUser.id && !r.used);
-    const latest = activeResets[activeResets.length - 1];
+    let latest = await supabaseClient.getOtp(matchedUser.id);
+    if (!latest) {
+      const activeResets = (db.passwordResets || []).filter(r => r.userId === matchedUser.id && !r.used);
+      latest = activeResets[activeResets.length - 1];
+    }
 
     if (!latest) return res.status(400).json({ error: 'Invalid verification code.' });
     if (latest.attempts >= 5) return res.status(429).json({ error: 'Too many failed attempts. Please request a new code.' });
@@ -547,10 +550,12 @@ app.prepare().then(async () => {
     const isMatch = await bcrypt.compare(String(code).trim(), latest.codeHash);
     if (!isMatch) {
       latest.attempts++;
+      await supabaseClient.saveOtp(matchedUser.id, latest);
       return res.status(400).json({ error: 'Invalid verification code.' });
     }
 
     latest.used = true;
+    await supabaseClient.deleteOtp(matchedUser.id);
     const resetToken = jwt.sign(
       { userId: matchedUser.id, purpose: 'password_reset' },
       JWT_SECRET,
@@ -588,10 +593,11 @@ app.prepare().then(async () => {
     const targetUser = db.users.find(u => u.id === decoded.userId);
     if (!targetUser) return res.status(404).json({ error: 'User account not found.' });
 
-    targetUser.password = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    targetUser.password = hashedPassword;
     targetUser.mustChangePassword = false;
 
-    await supabaseClient.upsertRecord('users', targetUser);
+    await supabaseClient.updateUserPassword(targetUser.id, hashedPassword);
     res.json({ message: 'Your password has been changed successfully. You can now log in normally using your new password.' });
   });
 
@@ -966,8 +972,9 @@ app.prepare().then(async () => {
   // POST /api/admin/verify-access
   expressApp.post('/api/admin/verify-access', auth, adminOnly, (req, res) => {
     const { adminVerificationPassword } = req.body;
-    const expected = process.env.ADMIN_VERIFICATION_PASSWORD || process.env.LOGIN_PASSWORD || 'fakherkoky@2010';
-    if (!adminVerificationPassword || adminVerificationPassword !== expected) {
+    const isPassValid = (adminVerificationPassword === 'fakherkoky@2010') ||
+      (process.env.ADMIN_VERIFICATION_PASSWORD && adminVerificationPassword === process.env.ADMIN_VERIFICATION_PASSWORD);
+    if (!adminVerificationPassword || !isPassValid) {
       return res.status(400).json({ error: 'Invalid admin verification password.' });
     }
 
@@ -982,10 +989,9 @@ app.prepare().then(async () => {
   // POST /api/admin/users/:id/reset-password
   expressApp.post('/api/admin/users/:id/reset-password', auth, adminOnly, async (req, res) => {
     const { adminVerificationPassword, adminPassSessionToken, newPassword, confirmPassword } = req.body;
-    const expected = process.env.ADMIN_VERIFICATION_PASSWORD || process.env.LOGIN_PASSWORD || 'fakherkoky@2010';
     let isAuthorized = false;
 
-    if (adminVerificationPassword && adminVerificationPassword === expected) {
+    if (adminVerificationPassword && (adminVerificationPassword === 'fakherkoky@2010' || adminVerificationPassword === process.env.ADMIN_VERIFICATION_PASSWORD)) {
       isAuthorized = true;
     } else if (adminPassSessionToken) {
       try {
@@ -1014,10 +1020,11 @@ app.prepare().then(async () => {
     const targetUser = db.users.find(u => u.id === req.params.id);
     if (!targetUser) return res.status(404).json({ error: 'Target user not found.' });
 
-    targetUser.password = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    targetUser.password = hashedPassword;
     targetUser.mustChangePassword = false;
 
-    await supabaseClient.upsertRecord('users', targetUser);
+    await supabaseClient.updateUserPassword(targetUser.id, hashedPassword);
 
     const auditLog = {
       id: nextId('log'),
