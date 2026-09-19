@@ -225,13 +225,19 @@ export default function AdminUsersPage() {
                 </td></tr>
               ) : filtered.map(u => (
                 <tr key={u._id || u.id}>
-                  <td>
+                  <td
+                    onClick={() => openPasswordManagement(u._id || u.id)}
+                    style={{ cursor: 'pointer' }}
+                    title="Click to change password for this user"
+                  >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>
                         {u.name?.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: 13 }}>{u.name}</div>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--primary)', textDecoration: 'underline dotted' }}>
+                          {u.name} <i className="fa-solid fa-pen-to-square" style={{ fontSize: 10, color: 'var(--secondary)', marginLeft: 4 }} />
+                        </div>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{u.email}</div>
                       </div>
                     </div>
@@ -246,8 +252,14 @@ export default function AdminUsersPage() {
                   <td style={{ fontSize: 12 }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      <button className="btn btn-outline btn-sm" title="Change Password" onClick={() => openPasswordManagement(u._id || u.id)}>
-                        <i className="fa-solid fa-key" /> Reset
+                      <button
+                        className="btn btn-outline btn-sm"
+                        title="Change Password"
+                        onClick={() => openPasswordManagement(u._id || u.id)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                      >
+                        <i className="fa-solid fa-key" style={{ color: 'var(--secondary)' }} />
+                        Reset Pass
                       </button>
                       {u.status === 'Active' ? (
                         <button className="btn btn-secondary btn-sm" onClick={() => updateUserStatus(u._id || u.id, 'Suspended')}>
