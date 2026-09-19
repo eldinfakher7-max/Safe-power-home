@@ -225,16 +225,12 @@ export default function LoginPage() {
               <input type="checkbox" checked={form.rememberMe} onChange={e => setForm(p => ({ ...p, rememberMe: e.target.checked }))} style={{ accentColor: 'var(--primary)' }} />
               Remember me
             </label>
-            <Link
+            <a
               href="/forgot-password"
-              onClick={(e) => {
-                e.preventDefault();
-                router.push('/forgot-password');
-              }}
               style={{ fontSize: 13, color: 'var(--secondary)', fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}
             >
               Forgot Password?
-            </Link>
+            </a>
           </div>
 
           {/* Security CAPTCHA Challenge */}
