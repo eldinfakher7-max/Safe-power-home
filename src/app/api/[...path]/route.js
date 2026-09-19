@@ -5,6 +5,7 @@ import { db, initStore, refreshTable, seedUserTwelveDevices, verifyAuth, nextId,
 import supabaseClient from '@/lib/supabase';
 import { getSecurityHeaders, sanitizeString, sanitizeUserObject, validateEmail, validatePasswordPolicy, createCaptchaChallenge, verifyCaptchaToken } from '@/lib/security';
 import { checkRateLimit } from '@/lib/rateLimiter';
+import { sendEmailOtp, sendSmsOtp } from '@/lib/notificationService';
 
 // Helper for JSON response with Security Headers and CORS protection
 function jsonResponse(data, status = 200, req = null) {
@@ -795,7 +796,13 @@ You also assist with energy management, appliance safety, and general programmin
     db.passwordResets.push(resetRecord);
     await supabaseClient.saveOtp(matchedUser.id, resetRecord);
 
-    console.log(`[SMS/Email Dispatcher] Verification code sent to ${method === 'phone' ? matchedUser.phone : matchedUser.email}: ${otpCode}`);
+    if (method === 'phone') {
+      await sendSmsOtp(matchedUser.phone, otpCode);
+    } else {
+      await sendEmailOtp(matchedUser.email, otpCode);
+    }
+
+    console.log(`[SMS/Email Dispatcher] Verification code for ${method === 'phone' ? matchedUser.phone : matchedUser.email}: ${otpCode}`);
 
     return jsonResponse({ message: 'Verification code sent successfully.' }, 200, request);
   }

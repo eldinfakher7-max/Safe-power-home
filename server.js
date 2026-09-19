@@ -514,6 +514,13 @@ app.prepare().then(async () => {
     db.passwordResets.push(resetRecord);
     await supabaseClient.saveOtp(matchedUser.id, resetRecord);
 
+    const { sendEmailOtp, sendSmsOtp } = require('./src/lib/notificationService');
+    if (method === 'phone') {
+      await sendSmsOtp(matchedUser.phone, otpCode);
+    } else {
+      await sendEmailOtp(matchedUser.email, otpCode);
+    }
+
     console.log(`[Security Dispatcher] Verification code for ${method === 'phone' ? matchedUser.phone : matchedUser.email}: ${otpCode}`);
 
     res.json({ message: 'Verification code sent successfully.' });
