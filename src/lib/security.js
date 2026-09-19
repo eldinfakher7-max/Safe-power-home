@@ -1,4 +1,5 @@
 // Security Hardening Helper Utilities
+import crypto from 'crypto';
 
 /**
  * Validates password against policy:
@@ -78,7 +79,19 @@ export function sanitizeUserObject(user) {
 }
 
 // In-Memory CAPTCHA Challenge Store
-const captchaStore = new Map();
+if (!globalThis._captchaStore) {
+  globalThis._captchaStore = new Map();
+}
+const captchaStore = globalThis._captchaStore;
+
+// Normalizes digits across Arabic and English keyboard layouts
+function normalizeDigits(str) {
+  if (str === undefined || str === null) return '';
+  return String(str)
+    .replace(/[٠-٩]/g, d => d.charCodeAt(0) - 1632)
+    .replace(/[۰-۹]/g, d => d.charCodeAt(0) - 1776)
+    .trim();
+}
 
 // Periodic cleanup of expired challenges
 if (typeof setInterval !== 'undefined') {
@@ -99,11 +112,14 @@ export function createCaptchaChallenge() {
   const num1 = Math.floor(Math.random() * 9) + 1;
   const num2 = Math.floor(Math.random() * 9) + 1;
   const answer = (num1 + num2).toString();
-  const captchaId = 'cap_' + Math.random().toString(36).slice(2, 10);
+  const timestamp = Date.now();
+  const secret = process.env.JWT_SECRET || 'smart_power_captcha_secret_99';
+  const hmac = crypto.createHmac('sha256', secret).update(`${num1}:${num2}:${timestamp}`).digest('hex').slice(0, 16);
+  const captchaId = `cap_${num1}_${num2}_${timestamp}_${hmac}`;
 
   captchaStore.set(captchaId, {
     answer,
-    expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes validity
+    expiresAt: timestamp + 10 * 60 * 1000, // 10 minutes validity
   });
 
   return {
@@ -118,17 +134,47 @@ export function createCaptchaChallenge() {
  * Verifies a CAPTCHA challenge answer on the server-side
  */
 export function verifyCaptchaToken(captchaId, userAnswer) {
-  if (!captchaId || !userAnswer) return false;
+  if (!captchaId || userAnswer === undefined || userAnswer === null) return false;
 
-  const record = captchaStore.get(captchaId);
-  if (!record) return false;
+  const normalizedUserAnswer = normalizeDigits(userAnswer);
+  if (!normalizedUserAnswer) return false;
 
-  // Single-use token (delete once checked)
-  captchaStore.delete(captchaId);
+  // 1. Check in-memory store if present
+  if (captchaStore.has(captchaId)) {
+    const record = captchaStore.get(captchaId);
+    captchaStore.delete(captchaId);
+    if (Date.now() <= record.expiresAt) {
+      if (normalizeDigits(record.answer) === normalizedUserAnswer) {
+        return true;
+      }
+    }
+  }
 
-  if (Date.now() > record.expiresAt) return false;
+  // 2. Stateless HMAC verification (resilient against server restarts and worker boundaries)
+  try {
+    const parts = captchaId.split('_');
+    if (parts.length === 5 && parts[0] === 'cap') {
+      const num1 = parseInt(parts[1], 10);
+      const num2 = parseInt(parts[2], 10);
+      const timestamp = parseInt(parts[3], 10);
+      const expectedHmac = parts[4];
 
-  return record.answer.trim() === userAnswer.toString().trim();
+      // Expire after 10 minutes
+      if (Date.now() - timestamp > 10 * 60 * 1000) return false;
+
+      const secret = process.env.JWT_SECRET || 'smart_power_captcha_secret_99';
+      const computedHmac = crypto.createHmac('sha256', secret).update(`${num1}:${num2}:${timestamp}`).digest('hex').slice(0, 16);
+
+      if (computedHmac === expectedHmac) {
+        const expectedAnswer = (num1 + num2).toString();
+        return expectedAnswer === normalizedUserAnswer;
+      }
+    }
+  } catch (err) {
+    return false;
+  }
+
+  return false;
 }
 
 /**
